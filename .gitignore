@@ -8,3 +8,4 @@ rich-text/.vite/
 *.log
 .DS_Store
 Thumbs.db
+rich-text/.playwright-mcp/
