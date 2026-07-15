@@ -89,8 +89,9 @@ export default function Editor() {
         size: s.size,
       })),
       pageElement: pageRef.current,
+      margins,
     })
-  }, [editor, activeTemplate, signatures])
+  }, [editor, activeTemplate, signatures, margins])
 
   const handleExportPdf = useCallback(() => {
     if (!editor) return
@@ -105,8 +106,9 @@ export default function Editor() {
         size: s.size,
       })),
       pageElement: pageRef.current,
+      margins,
     })
-  }, [editor, activeTemplate, signatures])
+  }, [editor, activeTemplate, signatures, margins])
 
   const handleImportFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
