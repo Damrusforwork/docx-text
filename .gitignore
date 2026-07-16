@@ -12,3 +12,4 @@ rich-text/.playwright-mcp/
 *MD/
 *HTML/
 *PLAN/
+*.md
