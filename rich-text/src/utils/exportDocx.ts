@@ -1,35 +1,35 @@
-const API_BASE = 'http://localhost:3001/api'
+const API_BASE = "http://localhost:3001/api";
 
 interface SignatureExport {
-  dataUrl: string
-  signerName: string
-  position: { x: number; y: number }
-  size: { width: number; height: number }
+  dataUrl: string;
+  signerName: string;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
 }
 
 interface ExportDocxOptions {
-  html: string
-  filename?: string
-  signatures?: SignatureExport[]
-  pageElement?: HTMLElement | null
-  margins?: { top: number; bottom: number; left: number; right: number }
+  html: string;
+  filename?: string;
+  signatures?: SignatureExport[];
+  pageElement?: HTMLElement | null;
+  margins?: { top: number; bottom: number; left: number; right: number };
 }
 
 function normalizeWhitespace(html: string): string {
-  return html.replace(/ {2,}/g, (match) => '&nbsp;'.repeat(match.length))
+  return html.replace(/ {2,}/g, (match) => "&nbsp;".repeat(match.length));
 }
 
 function pxToPt(html: string): string {
   return html.replace(/font-size:\s*(\d+(?:\.\d+)?)px/gi, (_, px) => {
-    const pt = Math.round(parseFloat(px) * 1)
-    return `font-size: ${pt}pt`
-  })
+    const pt = Math.round(parseFloat(px) * 1);
+    return `font-size: ${pt}pt`;
+  });
 }
 
 function extractFontFamily(html: string): string {
-  const match = html.match(/font-family:\s*([^;"]+)/i)
-  if (match) return match[1].trim()
-  return '"TH Sarabun New", sans-serif'
+  const match = html.match(/font-family:\s*([^;"]+)/i);
+  if (match) return match[1].trim();
+  return '"TH Sarabun New", sans-serif';
 }
 
 function buildFullHtml(
@@ -38,13 +38,13 @@ function buildFullHtml(
   signatures: SignatureExport[],
   margins: { top: number; bottom: number; left: number; right: number },
 ): string {
-  let styles = ''
-  const fontFamily = extractFontFamily(html)
+  let styles = "";
+  const fontFamily = extractFontFamily(html);
 
-  const marginTop = margins.top
-  const marginBottom = margins.bottom
-  const marginLeft = margins.left
-  const marginRight = margins.right
+  const marginTop = margins.top;
+  const marginBottom = margins.bottom;
+  const marginLeft = margins.left;
+  const marginRight = margins.right;
 
   styles = `
     <style>
@@ -66,12 +66,19 @@ function buildFullHtml(
       th { background-color: #f0f0f0; }
       img { max-width: 100%; height: auto; }
       p, h1, h2, h3 { page-break-inside: avoid; }
-    </style>`
+    </style>`;
 
-  html = pxToPt(html)
-  html = normalizeWhitespace(html)
+  html = pxToPt(html);
+  html = normalizeWhitespace(html);
 
-  let signatureLayer = ''
+  html = html.replace(/<p[^>]*>\s*<\/p>/gi, "<div>&nbsp;</div>");
+  html = html.replace(/<p[^>]*>\s*<br\s*\/?>\s*<\/p>/gi, "<div>&nbsp;</div>");
+
+  // Convert all remaining <p> tags to <div> because LibreOffice HTML import forces default paragraph margins on <p>
+  html = html.replace(/<p\b/gi, "<div");
+  html = html.replace(/<\/p>/gi, "</div>");
+
+  let signatureLayer = "";
   if (signatures.length > 0) {
     const imgs = signatures
       .map(
@@ -80,12 +87,12 @@ function buildFullHtml(
         <img src="${s.dataUrl}" alt="${s.signerName}" style="width:100%;height:100%;object-fit:contain;display:block;" />
       </div>`,
       )
-      .join('')
+      .join("");
 
     signatureLayer = `
       <div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:9999;">
         ${imgs}
-      </div>`
+      </div>`;
   }
 
   return `<!DOCTYPE html>
@@ -100,36 +107,36 @@ function buildFullHtml(
     ${signatureLayer}
   </div>
 </body>
-</html>`
+</html>`;
 }
 
 export async function exportToDocx({
   html,
-  filename = 'document.docx',
+  filename = "document.docx",
   signatures = [],
   pageElement = null,
   margins = { top: 2.54, bottom: 2.54, left: 3.175, right: 2.54 },
 }: ExportDocxOptions) {
-  const fullHtml = buildFullHtml(html, pageElement, signatures, margins)
+  const fullHtml = buildFullHtml(html, pageElement, signatures, margins);
 
   const response = await fetch(`${API_BASE}/convert/docx`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ html: fullHtml, filename }),
-  })
+  });
 
   if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`DOCX conversion failed: ${response.status} ${text}`)
+    const text = await response.text();
+    throw new Error(`DOCX conversion failed: ${response.status} ${text}`);
   }
 
-  const blob = await response.blob()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

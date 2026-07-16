@@ -8,15 +8,15 @@ interface SignatureExport {
 }
 
 interface ExportPdfOptions {
-  html: string
-  filename?: string
-  signatures?: SignatureExport[]
-  pageElement?: HTMLElement | null
-  margins?: { top: number; bottom: number; left: number; right: number }
+  html: string;
+  filename?: string;
+  signatures?: SignatureExport[];
+  pageElement?: HTMLElement | null;
+  margins?: { top: number; bottom: number; left: number; right: number };
 }
 
 function normalizeWhitespace(html: string): string {
-  return html.replace(/ {2,}/g, (match) => '&nbsp;'.repeat(match.length))
+  return html.replace(/ {2,}/g, (match) => "&nbsp;".repeat(match.length));
 }
 
 function pxToPt(html: string): string {
@@ -70,6 +70,13 @@ function buildFullHtml(
 
   html = pxToPt(html);
   html = normalizeWhitespace(html);
+
+  html = html.replace(/<p[^>]*>\s*<\/p>/gi, "<div>&nbsp;</div>");
+  html = html.replace(/<p[^>]*>\s*<br\s*\/?>\s*<\/p>/gi, "<div>&nbsp;</div>");
+
+  // Convert all remaining <p> tags to <div> because LibreOffice HTML import forces default paragraph margins on <p>
+  html = html.replace(/<p\b/gi, "<div");
+  html = html.replace(/<\/p>/gi, "</div>");
 
   let signatureLayer = "";
   if (signatures.length > 0) {
