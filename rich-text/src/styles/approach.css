@@ -1,0 +1,187 @@
+.approach-workspace {
+  min-height: 100vh;
+  background: #e5e7eb;
+}
+
+.approach-overview {
+  padding: 28px clamp(20px, 4vw, 52px) 0;
+  border-bottom: 1px solid #cad4df;
+  background: linear-gradient(135deg, #071a2f, #122d4b);
+  color: #edf6ff;
+}
+
+.approach-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.approach-number {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  border-radius: 16px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.approach-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #67e8d2;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.approach-title-row h1 {
+  margin: 5px 0 4px;
+  font-size: clamp(23px, 3vw, 34px);
+  line-height: 1.2;
+}
+
+.approach-title-row p {
+  max-width: 800px;
+  margin: 0;
+  color: #aebfd3;
+  font-size: 14px;
+}
+
+.approach-comparison,
+.approach-pros-cons {
+  display: grid;
+  max-width: 1160px;
+  margin: 20px auto 0;
+  gap: 12px;
+}
+
+.approach-comparison {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.approach-comparison article,
+.approach-pros-cons article {
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  background: rgba(8, 25, 44, 0.58);
+}
+
+.approach-card-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.approach-comparison p,
+.approach-comparison ol,
+.approach-pros-cons ul {
+  margin: 7px 0 0;
+  color: #b9c8d9;
+  font-size: 12px;
+}
+
+.approach-comparison ol,
+.approach-pros-cons ul {
+  padding-left: 18px;
+}
+
+.approach-pros-cons {
+  grid-template-columns: 1fr 1fr;
+}
+
+.approach-pros-cons h2 {
+  margin: 0;
+  color: #dceafa;
+  font-size: 13px;
+}
+
+.approach-instrument {
+  max-width: 1160px;
+  margin: 12px auto 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(103, 232, 210, 0.35);
+  border-radius: 8px;
+  background: rgba(20, 184, 166, 0.09);
+  color: #baf7ee;
+  font-size: 12px;
+}
+
+.approach-instrument canvas {
+  display: none;
+}
+
+.approach-checklist {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 1160px;
+  margin: 12px auto 0;
+  gap: 7px;
+}
+
+.approach-checklist button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 7px;
+  background: rgba(8, 25, 44, 0.55);
+  color: #afc0d4;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.approach-checklist button.checked {
+  border-color: rgba(52, 211, 153, 0.5);
+  color: #6ee7b7;
+}
+
+.sandbox-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1160px;
+  margin: 22px auto 0;
+  padding: 10px 14px;
+  border-radius: 9px 9px 0 0;
+  background: #e5e7eb;
+  color: #23364b;
+}
+
+.sandbox-label span {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sandbox-label small {
+  color: #61758a;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .approach-comparison { grid-template-columns: 1fr; }
+  .approach-checklist { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .approach-title-row { display: block; }
+  .approach-number { margin-bottom: 12px; }
+  .approach-pros-cons { grid-template-columns: 1fr; }
+  .approach-checklist { grid-template-columns: 1fr; }
+  .sandbox-label { display: block; }
+  .sandbox-label small { display: block; margin-top: 3px; }
+}

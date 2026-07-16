@@ -1,4 +1,5 @@
 import { buildExportHtml, type DocumentMargins, type SignatureExport } from './documentExport'
+import { DOCUMENT_PAGE_SPEC } from '../pageSpec'
 
 const API_BASE = 'http://localhost:3001/api'
 
@@ -13,7 +14,7 @@ export async function exportToDocx({
   html,
   filename = "document.docx",
   signatures = [],
-  margins = { top: 2.54, bottom: 2.54, left: 3.175, right: 2.54 },
+  margins = DOCUMENT_PAGE_SPEC.defaultMargins,
 }: ExportDocxOptions) {
   const fullHtml = buildExportHtml({ html, signatures, margins })
 

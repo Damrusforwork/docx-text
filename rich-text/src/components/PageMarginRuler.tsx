@@ -1,12 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Ruler } from 'lucide-react'
+import type { DocumentMargins } from '../pageSpec'
 
-export interface PageMargins {
-  top: number
-  bottom: number
-  left: number
-  right: number
-}
+export type PageMargins = DocumentMargins
 
 interface PageMarginRulerProps {
   margins: PageMargins
