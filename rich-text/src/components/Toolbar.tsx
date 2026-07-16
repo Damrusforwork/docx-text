@@ -185,7 +185,7 @@ export default function Toolbar({ editor }: ToolbarProps) {
     (size: number) => {
       if (!editor) return
       if (size <= 0) return
-      editor.chain().focus().setFontSize(`${size}px`).run()
+      editor.chain().focus().setFontSize(`${size}pt`).run()
     },
     [editor]
   )
@@ -256,7 +256,7 @@ export default function Toolbar({ editor }: ToolbarProps) {
           <select
             value={currentFontSize}
             onChange={(e) => setFontSize(Number(e.target.value))}
-            title={`Font size: ${currentFontSize}px`}
+            title={`Font size: ${currentFontSize}pt`}
           >
             {[6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 54, 60, 72, 84, 96].map((size) => (
               <option key={size} value={size}>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Color } from '@tiptap/extension-color'
 import { Highlight } from '@tiptap/extension-highlight'
 import { Image } from '@tiptap/extension-image'
@@ -48,6 +48,8 @@ export default function Editor() {
   const [pdfMode, setPdfMode] = useState(false)
   const [pdfPages, setPdfPages] = useState<PdfPageData[]>([])
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null)
+  const [pageCount, setPageCount] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
   const pageRef = useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
@@ -93,7 +95,6 @@ export default function Editor() {
         position: s.position,
         size: s.size,
       })),
-      pageElement: pageRef.current,
       margins,
     })
   }, [editor, activeTemplate, signatures, margins])
@@ -110,7 +111,6 @@ export default function Editor() {
         position: s.position,
         size: s.size,
       })),
-      pageElement: pageRef.current,
       margins,
     })
   }, [editor, activeTemplate, signatures, margins])
@@ -168,6 +168,58 @@ export default function Editor() {
     setPdfData(null)
   }, [])
 
+  useEffect(() => {
+    if (!editor) return
+
+    const centimetersToPixels = (centimeters: number) => centimeters * (96 / 2.54)
+    const pageHeight = centimetersToPixels(29.7)
+
+    const recalculatePages = () => {
+      const content = pageRef.current?.querySelector<HTMLElement>('.document-content')
+      if (!content) return
+      const usableHeight = Math.max(
+        1,
+        pageHeight - centimetersToPixels(margins.top + margins.bottom),
+      )
+      setPageCount(Math.max(1, Math.ceil(content.scrollHeight / usableHeight)))
+    }
+
+    const updateCurrentPage = () => {
+      const page = pageRef.current
+      if (!page) return
+      try {
+        const caret = editor.view.coordsAtPos(editor.state.selection.head)
+        const pageTop = page.getBoundingClientRect().top
+        const nextPage = Math.floor(Math.max(0, caret.top - pageTop) / pageHeight) + 1
+        setCurrentPage(Math.min(Math.max(1, nextPage), pageCount))
+      } catch {
+        setCurrentPage(1)
+      }
+    }
+
+    let frame = 0
+    const scheduleRecalculation = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        recalculatePages()
+        updateCurrentPage()
+      })
+    }
+    const content = pageRef.current?.querySelector<HTMLElement>('.document-content')
+    const resizeObserver = new ResizeObserver(scheduleRecalculation)
+    if (content) resizeObserver.observe(content)
+    editor.on('update', scheduleRecalculation)
+    editor.on('selectionUpdate', updateCurrentPage)
+    scheduleRecalculation()
+
+    return () => {
+      cancelAnimationFrame(frame)
+      resizeObserver.disconnect()
+      editor.off('update', scheduleRecalculation)
+      editor.off('selectionUpdate', updateCurrentPage)
+    }
+  }, [editor, margins, pageCount])
+
   if (pdfMode && pdfPages.length > 0 && pdfData) {
     return (
       <PdfAnnotator
@@ -209,6 +261,10 @@ export default function Editor() {
 
         <div className="toolbar-group">
           <PageMarginRuler margins={margins} onChange={setMargins} />
+        </div>
+
+        <div className="page-status" title="หน้าปัจจุบันและจำนวนหน้าจาก A4 preview">
+          หน้า {currentPage} / {pageCount}
         </div>
 
         <div className="toolbar-divider" />
@@ -287,12 +343,21 @@ export default function Editor() {
           ref={pageRef}
           className="page a4-page"
           style={{
+            minHeight: `${pageCount * 29.7}cm`,
             paddingTop: `${margins.top}cm`,
             paddingBottom: `${margins.bottom}cm`,
             paddingLeft: `${margins.left}cm`,
             paddingRight: `${margins.right}cm`,
           }}
         >
+          <div className="page-guides" aria-hidden="true">
+            {Array.from({ length: pageCount }, (_, index) => (
+              <div className="page-guide" key={index} style={{ top: `${index * 29.7}cm` }}>
+                <span className="page-number">หน้า {index + 1}</span>
+                {index < pageCount - 1 && <span className="page-break-label">Page break</span>}
+              </div>
+            ))}
+          </div>
           <EditorContent editor={editor} />
 
           {/* <div className="page-footer">

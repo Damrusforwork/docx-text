@@ -419,51 +419,55 @@
   outline: none;
   min-height: 200mm;
   font-family: 'TH Sarabun New', sans-serif;
-  zoom: 1.3333;
+  font-size: 16pt;
+  line-height: 1.5;
   white-space: pre-wrap;
+  position: relative;
+  z-index: 2;
 }
 
 .document-content h1 {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 24px;
+  font-family: 'TH Sarabun New', sans-serif;
+  font-size: 24pt;
   font-weight: 700;
-  margin: 0 0 8px;
+  margin: 0 0 8pt;
   color: #000;
 }
 
 .document-content h2 {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 20px;
+  font-family: 'TH Sarabun New', sans-serif;
+  font-size: 20pt;
   font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0 0 8pt;
   color: #000;
 }
 
 .document-content h3 {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 18px;
+  font-family: 'TH Sarabun New', sans-serif;
+  font-size: 18pt;
   font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0 0 8pt;
   color: #000;
 }
 
 .document-content p {
-  font-family: 'Sarabun', sans-serif;
-  font-size: 16px;
+  font-family: 'TH Sarabun New', sans-serif;
+  min-height: 1.5em;
+  font-size: 16pt;
   line-height: 1.5;
-  margin: 0 0 4px;
+  margin: 0;
   color: #000;
 }
 
 .document-content ul,
 .document-content ol {
-  font-family: 'Sarabun', sans-serif;
-  margin: 8px 0;
-  padding-left: 32px;
+  font-family: 'TH Sarabun New', sans-serif;
+  margin: 8pt 0;
+  padding-left: 32pt;
 }
 
 .document-content li {
-  font-size: 16px;
+  font-size: 16pt;
   line-height: 1.5;
 }
 
@@ -471,16 +475,16 @@
 .document-content table {
   border-collapse: collapse;
   width: 100%;
-  margin: 12px 0;
-  font-family: 'Sarabun', sans-serif;
+  margin: 12pt 0;
+  font-family: 'TH Sarabun New', sans-serif;
 }
 
 .document-content th,
 .document-content td {
   border: 1px solid #000;
-  padding: 8px 12px;
+  padding: 8pt 12pt;
   text-align: left;
-  font-size: 14px;
+  font-size: 14pt;
 }
 
 .document-content th {
@@ -507,7 +511,7 @@
   max-width: 100%;
   height: auto;
   display: block;
-  margin: 8px auto;
+  margin: 8pt auto;
 }
 
 /* Placeholder */
@@ -530,16 +534,11 @@
 .document-content hr {
   border: none;
   border-top: 1px solid #ccc;
-  margin: 16px 0;
-}
-
-/* Font size via textStyle mark */
-.document-content [style*="font-size"] {
-  font-size: inherit;
+  margin: 16pt 0;
 }
 
 .document-content span[style] {
-  line-height: 1.5;
+  line-height: inherit;
 }
 
 /* === Signature Components === */
