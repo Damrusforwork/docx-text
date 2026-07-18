@@ -1,4 +1,4 @@
-import { buildExportHtml, type DocumentMargins, type SignatureExport } from './documentExport'
+import { buildExportHtml, type DocumentMargins } from './documentExport'
 import { DOCUMENT_PAGE_SPEC } from '../pageSpec'
 
 const API_BASE = 'http://localhost:3001/api'
@@ -6,17 +6,15 @@ const API_BASE = 'http://localhost:3001/api'
 interface ExportPdfOptions {
   html: string
   filename?: string
-  signatures?: SignatureExport[]
   margins?: DocumentMargins
 }
 
 export async function exportToPdf({
   html,
   filename = "document.pdf",
-  signatures = [],
   margins = DOCUMENT_PAGE_SPEC.defaultMargins,
 }: ExportPdfOptions) {
-  const fullHtml = buildExportHtml({ html, signatures, margins })
+  const fullHtml = buildExportHtml({ html, margins })
 
   const response = await fetch(`${API_BASE}/convert/pdf`, {
     method: "POST",

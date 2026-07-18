@@ -13,7 +13,7 @@ export async function importDocx(file: File) {
         "p[style-name='Title'] => h1:fresh",
         "p[style-name='Subtitle'] => h2:fresh",
       ],
-      convertImage: mammoth.images.inline(async (element) => {
+      convertImage: mammoth.images.imgElement(async (element) => {
         const buffer = await element.read('base64')
         const contentType = element.contentType || 'image/png'
         return { src: `data:${contentType};base64,${buffer}` }

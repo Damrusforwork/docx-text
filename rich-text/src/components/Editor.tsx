@@ -23,28 +23,18 @@ import {
 } from 'lucide-react'
 import Toolbar from './Toolbar'
 import PageMarginRuler, { type PageMargins } from './PageMarginRuler'
-import SignatureManager from './SignatureManager'
-import SignatureLayer from './SignatureLayer'
 import PdfAnnotator from './PdfAnnotator'
-import type { SignatureData } from './SignatureLayer'
 import type { PdfPageData } from '../utils/importPdf'
 import { DOCUMENT_PAGE_SPEC } from '../pageSpec'
-import {
-  findLineBreakIndex,
-  markCandidateBreak,
-  measureDocumentLines,
-  type BlockLineMeasurement,
-} from '../lineMeasurement'
+import { measureDocumentLines } from '../lineMeasurement'
 import {
   buildPageBreakDecorations,
   buildPageLayouts,
   pageLayoutSignature,
-  type PaginationPluginState,
 } from '../paginationModel'
 import {
-  getPaginationState,
   PaginationState,
-  setPaginationLayout,
+  setPageBreaks,
 } from '../extensions/paginationState'
 import { templates } from '../templates/index'
 import { exportToDocx } from '../utils/exportDocx'
@@ -52,24 +42,11 @@ import { exportToPdf } from '../utils/exportPdf'
 import { importDocx } from '../utils/importDocx'
 import { importPdf } from '../utils/importPdf'
 
-interface EditorProps {
-  onLineMeasurements?: (measurements: BlockLineMeasurement[]) => void
-  persistPagination?: boolean
-  renderPageSheets?: boolean
-  onPaginationState?: (state: PaginationPluginState) => void
-}
-
-export default function Editor({
-  onLineMeasurements,
-  persistPagination = false,
-  renderPageSheets = false,
-  onPaginationState,
-}: EditorProps = {}) {
+export default function Editor() {
   const [activeTemplate, setActiveTemplate] = useState<string>('internalMemo')
   const [importWarnings, setImportWarnings] = useState<string[]>([])
   const [showImportMenu, setShowImportMenu] = useState<boolean>(false)
   const [margins, setMargins] = useState<PageMargins>({ ...DOCUMENT_PAGE_SPEC.defaultMargins })
-  const [signatures, setSignatures] = useState<SignatureData[]>([])
   const [pdfMode, setPdfMode] = useState(false)
   const [pdfPages, setPdfPages] = useState<PdfPageData[]>([])
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null)
@@ -77,7 +54,6 @@ export default function Editor({
   const [currentPage, setCurrentPage] = useState(1)
   const pageRef = useRef<HTMLDivElement>(null)
   const pageCountRef = useRef(1)
-  const measurementSignatureRef = useRef('')
   const paginationSignatureRef = useRef('')
 
   const editor = useEditor({
@@ -96,7 +72,7 @@ export default function Editor({
       FontFamily,
       FontSize,
       Color,
-      ...(persistPagination || renderPageSheets ? [PaginationState] : []),
+      PaginationState,
     ],
     content: templates.internalMemo.content,
     editorProps: { attributes: { class: 'document-content' } },
@@ -129,15 +105,9 @@ export default function Editor({
     exportToDocx({
       html,
       filename: `${activeTemplate}.docx`,
-      signatures: signatures.map((s) => ({
-        dataUrl: s.dataUrl,
-        signerName: s.signerName,
-        position: s.position,
-        size: s.size,
-      })),
       margins,
     })
-  }, [editor, getPaginatedHtml, activeTemplate, signatures, margins])
+  }, [editor, getPaginatedHtml, activeTemplate, margins])
 
   const handleExportPdf = useCallback(() => {
     if (!editor) return
@@ -145,15 +115,9 @@ export default function Editor({
     exportToPdf({
       html,
       filename: `${activeTemplate}.pdf`,
-      signatures: signatures.map((s) => ({
-        dataUrl: s.dataUrl,
-        signerName: s.signerName,
-        position: s.position,
-        size: s.size,
-      })),
       margins,
     })
-  }, [editor, getPaginatedHtml, activeTemplate, signatures, margins])
+  }, [editor, getPaginatedHtml, activeTemplate, margins])
 
   const handleImportFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,22 +150,6 @@ export default function Editor({
     [editor]
   )
 
-  const handleAddSignature = useCallback((sig: SignatureData) => {
-    setSignatures((prev) => [...prev, sig])
-  }, [])
-
-  const handleRemoveSignature = useCallback((id: string) => {
-    setSignatures((prev) => prev.filter((s) => s.id !== id))
-  }, [])
-
-  const handleUpdateSignature = useCallback((id: string, updates: Partial<SignatureData>) => {
-    setSignatures((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)))
-  }, [])
-
-  const handleClearSignatures = useCallback(() => {
-    setSignatures([])
-  }, [])
-
   const handleExitPdfMode = useCallback(() => {
     setPdfMode(false)
     setPdfPages([])
@@ -222,99 +170,38 @@ export default function Editor({
       const pageWidth = page.getBoundingClientRect().width
       const pixelsPerCentimeter = pageWidth / DOCUMENT_PAGE_SPEC.widthCm
       const pageHeight = DOCUMENT_PAGE_SPEC.heightCm * pixelsPerCentimeter
-      const pageStride = pageHeight + DOCUMENT_PAGE_SPEC.gapPx
       const marginTop = margins.top * pixelsPerCentimeter
       const marginBottom = margins.bottom * pixelsPerCentimeter
-      const blocks = Array.from(content.children) as HTMLElement[]
 
-      blocks.forEach((block) => {
-        block.removeAttribute('data-page-break-before')
-        block.style.removeProperty('--page-break-offset')
-        block.style.removeProperty('--page-original-padding')
-      })
-
-      const shouldMeasureLines = Boolean(onLineMeasurements || persistPagination || renderPageSheets)
       content.classList.add('measuring-layout')
-      let lineMeasurements: BlockLineMeasurement[] = []
+      let lineMeasurements
       try {
-        lineMeasurements = shouldMeasureLines
-          ? measureDocumentLines(content, (node, offset) => editor.view.posAtDOM(node, offset))
-          : []
+        lineMeasurements = measureDocumentLines(
+          content,
+          (node, offset) => editor.view.posAtDOM(node, offset),
+        )
       } finally {
         content.classList.remove('measuring-layout')
       }
 
-      let pageIndex = 0
-      if (!renderPageSheets) for (const [blockIndex, block] of blocks.entries()) {
-        let blockTop = content.offsetTop + block.offsetTop
-        let blockHeight = block.getBoundingClientRect().height
-        let contentBottom = pageIndex * pageStride + pageHeight - marginBottom
-
-        if (blockTop + blockHeight > contentBottom && blockTop > marginTop) {
-          const measurement = lineMeasurements[blockIndex]
-          if (measurement) {
-            const candidate = measurement.unsplittable
-              ? 0
-              : findLineBreakIndex(measurement.lines, contentBottom - blockTop) ?? 0
-            lineMeasurements[blockIndex] = markCandidateBreak(measurement, candidate)
-          }
-
-          pageIndex += 1
-          const nextPageTop = pageIndex * pageStride + marginTop
-          const originalPadding = Number.parseFloat(getComputedStyle(block).paddingTop) || 0
-          block.setAttribute('data-page-break-before', 'true')
-          block.style.setProperty('--page-original-padding', `${originalPadding}px`)
-          block.style.setProperty(
-            '--page-break-offset',
-            `${Math.max(0, nextPageTop - blockTop - originalPadding)}px`,
-          )
-          blockTop = content.offsetTop + block.offsetTop
-          blockHeight = block.getBoundingClientRect().height
-          contentBottom = pageIndex * pageStride + pageHeight - marginBottom
-        }
-
-        while (blockTop + blockHeight > contentBottom + pageHeight) {
-          pageIndex += 1
-          contentBottom = pageIndex * pageStride + pageHeight - marginBottom
-        }
-      }
-
-      const pageLayouts = persistPagination
-        ? buildPageLayouts(lineMeasurements, pageHeight - marginTop - marginBottom)
-        : []
-      const pageBreaks = renderPageSheets
-        ? buildPageBreakDecorations(
-            pageLayouts,
-            pageHeight - marginTop - marginBottom,
-            marginTop,
-            marginBottom,
-            DOCUMENT_PAGE_SPEC.gapPx,
-          )
-        : []
-      const nextPageCount = persistPagination
-        ? Math.max(1, pageLayouts.length)
-        : Math.max(1, pageIndex + 1)
+      const usableHeight = pageHeight - marginTop - marginBottom
+      const pageLayouts = buildPageLayouts(lineMeasurements, usableHeight)
+      const pageBreaks = buildPageBreakDecorations(
+        pageLayouts,
+        usableHeight,
+        marginTop,
+        marginBottom,
+        DOCUMENT_PAGE_SPEC.gapPx,
+      )
+      const nextPageCount = Math.max(1, pageLayouts.length)
       pageCountRef.current = nextPageCount
       setPageCount(nextPageCount)
       setCurrentPage((value) => Math.min(value, nextPageCount))
 
-      if (onLineMeasurements) {
-        const signature = lineMeasurements
-          .map((block) => `${block.lines.length}:${block.candidateBreakLineIndex ?? '-'}`)
-          .join('|')
-        if (signature !== measurementSignatureRef.current) {
-          measurementSignatureRef.current = signature
-          onLineMeasurements(lineMeasurements)
-        }
-      }
-
-      if (persistPagination) {
-        const signature = `${pageLayoutSignature(pageLayouts)}:${JSON.stringify(pageBreaks)}`
-        if (signature !== paginationSignatureRef.current) {
-          paginationSignatureRef.current = signature
-          setPaginationLayout(editor, pageLayouts, pageBreaks)
-          onPaginationState?.(getPaginationState(editor))
-        }
+      const signature = `${pageLayoutSignature(pageLayouts)}:${JSON.stringify(pageBreaks)}`
+      if (signature !== paginationSignatureRef.current) {
+        paginationSignatureRef.current = signature
+        setPageBreaks(editor, pageBreaks)
       }
       isPaginating = false
     }
@@ -355,7 +242,7 @@ export default function Editor({
       editor.off('update', scheduleRecalculation)
       editor.off('selectionUpdate', updateCurrentPage)
     }
-  }, [editor, margins, onLineMeasurements, onPaginationState, persistPagination, renderPageSheets])
+  }, [editor, margins])
 
   if (pdfMode && pdfPages.length > 0 && pdfData) {
     return (
@@ -478,7 +365,7 @@ export default function Editor({
       <div className="page-container">
         <div
           ref={pageRef}
-          className={`page a4-page ${renderPageSheets ? 'canonical-page-renderer' : ''}`}
+          className="page a4-page canonical-page-renderer"
           style={{
             width: `${DOCUMENT_PAGE_SPEC.widthCm}cm`,
             minHeight: `calc(${pageCount * DOCUMENT_PAGE_SPEC.heightCm}cm + ${(pageCount - 1) * DOCUMENT_PAGE_SPEC.gapPx}px)`,
@@ -491,7 +378,7 @@ export default function Editor({
             lineHeight: `${DOCUMENT_PAGE_SPEC.typography.lineHeightPt}pt`,
           }}
         >
-          <div className={`page-sheets ${renderPageSheets ? 'canonical-page-sheets' : ''}`} aria-hidden="true">
+          <div className="page-sheets canonical-page-sheets" aria-hidden="true">
             {Array.from({ length: pageCount }, (_, index) => (
               <section
                 className="page-sheet"
@@ -516,17 +403,6 @@ export default function Editor({
             ))}
           </div>
           <EditorContent editor={editor} />
-
-          {/* <div className="page-footer">
-            <span className="footer-text">หน้า 1</span>
-            <div className="footer-line" />
-          </div> */}
-
-          <SignatureLayer
-            signatures={signatures}
-            onUpdate={handleUpdateSignature}
-            onRemove={handleRemoveSignature}
-          />
         </div>
       </div>
     </div>

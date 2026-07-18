@@ -38,7 +38,6 @@ export class ConvertController {
     try {
       const buffer = await this.convertService.convertHtmlToPdf(
         body.html,
-        body.filename,
       )
       const filename = body.filename || 'document.pdf'
       res.set({
@@ -68,7 +67,6 @@ export class ConvertController {
     try {
       const buffer = await this.convertService.convertHtmlToDocx(
         body.html,
-        body.filename,
       )
       const filename = body.filename || 'document.docx'
       res.set({

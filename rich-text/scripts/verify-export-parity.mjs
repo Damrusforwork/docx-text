@@ -8,7 +8,7 @@ const API_URL = 'http://127.0.0.1:3001/api/convert/pdf'
 const MARGINS = { top: 2.5, bottom: 2.5, left: 3, right: 1.5 }
 
 async function exportFixture(editorHtml, filename) {
-  const html = buildExportHtml({ html: editorHtml, signatures: [], margins: MARGINS })
+  const html = buildExportHtml({ html: editorHtml, margins: MARGINS })
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

@@ -1,11 +1,7 @@
 import { Extension, type Editor } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
-import type {
-  PageBreakDecoration,
-  PageLayout,
-  PaginationPluginState,
-} from '../paginationModel.ts'
+import type { PageBreakDecoration } from '../paginationModel.ts'
 
 const BLOCK_TYPES = [
   'paragraph',
@@ -20,12 +16,7 @@ const BLOCK_TYPES = [
 ]
 
 const UNIQUE_ID_META = 'paginationLayoutIds'
-export const PAGINATION_PLUGIN_KEY = new PluginKey<PaginationPluginState>('paginationState')
-
-interface PaginationMeta {
-  pages: PageLayout[]
-  breaks: PageBreakDecoration[]
-}
+const PAGINATION_PLUGIN_KEY = new PluginKey<PageBreakDecoration[]>('paginationState')
 
 function createLayoutId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `layout-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -63,20 +54,18 @@ export const PaginationState = Extension.create({
   },
 
   addProseMirrorPlugins() {
-    return [new Plugin<PaginationPluginState>({
+    return [new Plugin<PageBreakDecoration[]>({
       key: PAGINATION_PLUGIN_KEY,
       state: {
-        init: () => ({ revision: 0, pages: [], breaks: [] }),
+        init: () => [],
         apply: (transaction, value) => {
-          const meta = transaction.getMeta(PAGINATION_PLUGIN_KEY) as PaginationMeta | undefined
-          return meta
-            ? { revision: value.revision + 1, pages: meta.pages, breaks: meta.breaks }
-            : value
+          return transaction.getMeta(PAGINATION_PLUGIN_KEY) as PageBreakDecoration[] | undefined
+            ?? value
         },
       },
       props: {
         decorations: (state) => {
-          const breaks = PAGINATION_PLUGIN_KEY.getState(state)?.breaks ?? []
+          const breaks = PAGINATION_PLUGIN_KEY.getState(state) ?? []
           const widgets = breaks
             .filter((pageBreak) => pageBreak.from >= 0 && pageBreak.from <= state.doc.content.size)
             .map((pageBreak) => Decoration.widget(pageBreak.from, () => {
@@ -124,14 +113,9 @@ export const PaginationState = Extension.create({
   },
 })
 
-export function setPaginationLayout(
+export function setPageBreaks(
   editor: Editor,
-  pages: PageLayout[],
   breaks: PageBreakDecoration[] = [],
 ) {
-  editor.view.dispatch(editor.state.tr.setMeta(PAGINATION_PLUGIN_KEY, { pages, breaks }))
-}
-
-export function getPaginationState(editor: Editor): PaginationPluginState {
-  return PAGINATION_PLUGIN_KEY.getState(editor.state) ?? { revision: 0, pages: [], breaks: [] }
+  editor.view.dispatch(editor.state.tr.setMeta(PAGINATION_PLUGIN_KEY, breaks))
 }

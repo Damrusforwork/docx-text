@@ -73,7 +73,7 @@
   color: #cbd5e1;
   font-size: 14px;
   font-family: 'Sarabun', sans-serif;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.15s;
   text-align: left;
   white-space: nowrap;

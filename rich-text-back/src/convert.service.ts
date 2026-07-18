@@ -103,7 +103,7 @@ export class ConvertService implements OnModuleInit {
     this.logger.log('Fonts installed to Linux user profile')
   }
 
-  async convertHtmlToPdf(html: string, filename?: string): Promise<Buffer> {
+  async convertHtmlToPdf(html: string): Promise<Buffer> {
     this.installFontsToSystem()
 
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'docx-convert-'))
@@ -129,7 +129,7 @@ export class ConvertService implements OnModuleInit {
     }
   }
 
-  async convertHtmlToDocx(html: string, filename?: string): Promise<Buffer> {
+  async convertHtmlToDocx(html: string): Promise<Buffer> {
     this.installFontsToSystem()
 
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'docx-convert-'))

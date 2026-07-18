@@ -22,12 +22,6 @@ export interface PageBreakDecoration {
   heightPx: number
 }
 
-export interface PaginationPluginState {
-  revision: number
-  pages: PageLayout[]
-  breaks: PageBreakDecoration[]
-}
-
 function createPage(pages: PageLayout[]): PageLayout {
   const page = { pageNumber: pages.length + 1, usedHeightPx: 0, fragments: [] }
   pages.push(page)

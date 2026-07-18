@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Editor } from '@tiptap/react'
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import {
   Bold,
   Italic,
@@ -13,7 +13,6 @@ import {
   List,
   ListOrdered,
   ImagePlus,
-  Table as TableIcon,
   Heading1,
   Heading2,
   Heading3,
@@ -157,6 +156,7 @@ interface ToolbarProps {
 
 export default function Toolbar({ editor }: ToolbarProps) {
   const [, forceUpdate] = useState(0)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!editor) return
@@ -192,20 +192,20 @@ export default function Toolbar({ editor }: ToolbarProps) {
 
   if (!editor) return null
 
-  const addImage = () => {
-    const url = window.prompt('URL ของรูปภาพ:')
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run()
-    }
-  }
+  const importImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
 
-  // const addTable = () => {
-  //   editor
-  //     .chain()
-  //     .focus()
-  //     .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-  //     .run()
-  // }
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        editor.chain().focus().setImage({ src: reader.result, alt: file.name }).run()
+      }
+    }
+    reader.onerror = () => window.alert('ไม่สามารถอ่านไฟล์รูปภาพได้')
+    reader.readAsDataURL(file)
+  }
 
   const rawFontFamily = readCurrentFontFamily(editor)
   const currentFontFamily = matchFontFamily(rawFontFamily)
@@ -401,12 +401,16 @@ export default function Toolbar({ editor }: ToolbarProps) {
       <ToolbarDivider />
 
       <div className="toolbar-group">
-        <ToolbarButton onClick={addImage} title="แทรกรูปภาพ">
+        <ToolbarButton onClick={() => imageInputRef.current?.click()} title="นำเข้ารูปภาพจากเครื่อง">
           <ImagePlus size={16} />
         </ToolbarButton>
-        {/* <ToolbarButton onClick={addTable} title="แทรกตาราง">
-          <TableIcon size={16} />
-        </ToolbarButton> */}
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/png,image/jpeg"
+          onChange={importImage}
+          hidden
+        />
       </div>
 
       <ToolbarDivider />

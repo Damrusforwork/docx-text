@@ -10,7 +10,6 @@ export interface LineToken {
 
 export interface LineFragment extends LineToken {
   height: number
-  pageBreakBefore: boolean
 }
 
 export interface BlockLineMeasurement {
@@ -20,7 +19,6 @@ export interface BlockLineMeasurement {
   lines: LineFragment[]
   keepWithNext: boolean
   unsplittable: boolean
-  candidateBreakLineIndex: number | null
 }
 
 export interface LineBreakRules {
@@ -48,7 +46,6 @@ export function groupLineTokens(tokens: LineToken[]): LineFragment[] {
       lines.push({
         ...token,
         height: token.bottom - token.top,
-        pageBreakBefore: false,
       })
       continue
     }
@@ -88,20 +85,6 @@ export function findLineBreakIndex(
   ) return 0
 
   return fittingLines
-}
-
-export function markCandidateBreak(
-  measurement: BlockLineMeasurement,
-  candidateBreakLineIndex: number,
-): BlockLineMeasurement {
-  return {
-    ...measurement,
-    candidateBreakLineIndex,
-    lines: measurement.lines.map((line, index) => ({
-      ...line,
-      pageBreakBefore: index === candidateBreakLineIndex,
-    })),
-  }
 }
 
 export function measureDocumentLines(
@@ -169,7 +152,6 @@ export function measureDocumentLines(
         top: rect.top - contentTop,
         bottom: rect.bottom - contentTop,
         height: rect.height,
-        pageBreakBefore: false,
         from: resolvePosition(block, 0, 0),
         to: resolvePosition(block, block.childNodes.length, block.textContent?.length ?? 0),
       }]
@@ -182,7 +164,6 @@ export function measureDocumentLines(
       lines,
       keepWithNext: /^H[1-6]$/.test(block.tagName),
       unsplittable: block.matches('table, hr') || Boolean(block.querySelector('table, img, hr')),
-      candidateBreakLineIndex: null,
     }
   })
 }

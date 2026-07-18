@@ -188,7 +188,7 @@ export default function PdfAnnotator({ pages, pdfData, onExit }: PdfAnnotatorPro
     } finally {
       setExporting(false)
     }
-  }, [pages, overlays, pdfData, exporting])
+  }, [overlays, pdfData, exporting])
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -571,25 +571,6 @@ function ImageItem({ overlay, isSelected, onSelect, onUpdate, pageWidth, pageHei
       )}
     </div>
   )
-}
-
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const words = text.split(/\s+/)
-  const lines: string[] = []
-  let currentLine = ''
-
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word
-    const metrics = ctx.measureText(testLine)
-    if (metrics.width > maxWidth && currentLine) {
-      lines.push(currentLine)
-      currentLine = word
-    } else {
-      currentLine = testLine
-    }
-  }
-  if (currentLine) lines.push(currentLine)
-  return lines
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {

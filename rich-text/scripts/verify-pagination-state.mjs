@@ -19,7 +19,6 @@ const lines = Array.from({ length: 5 }, (_, index) => ({
   top: index * 24,
   bottom: (index + 1) * 24,
   height: 24,
-  pageBreakBefore: false,
 }))
 const pages = buildPageLayouts([{
   blockIndex: 0,
@@ -28,7 +27,6 @@ const pages = buildPageLayouts([{
   lines,
   keepWithNext: false,
   unsplittable: false,
-  candidateBreakLineIndex: null,
 }], 72)
 
 assert.equal(pages.length, 2)

@@ -2,16 +2,8 @@ import { DOCUMENT_PAGE_SPEC, type DocumentMargins } from '../pageSpec.ts'
 
 export type { DocumentMargins } from '../pageSpec.ts'
 
-export interface SignatureExport {
-  dataUrl: string
-  signerName: string
-  position: { x: number; y: number }
-  size: { width: number; height: number }
-}
-
 interface BuildExportHtmlOptions {
   html: string
-  signatures: SignatureExport[]
   margins: DocumentMargins
 }
 
@@ -25,10 +17,6 @@ function normalizeCssLengthsForLibreOffice(html: string): string {
     const points = unit.toLowerCase() === 'pt' ? numericValue : numericValue * 0.75
     return `${Math.round(points * 100) / 100}pt`
   })
-}
-
-function browserPixelsToPoints(value: number): number {
-  return Math.round(value * 0.75 * 100) / 100
 }
 
 function normalizeParagraphsForLibreOffice(html: string): string {
@@ -69,22 +57,12 @@ function inlinePageBreakStyles(html: string): string {
 
 export function buildExportHtml({
   html,
-  signatures,
   margins,
 }: BuildExportHtmlOptions): string {
   const { widthCm, heightCm, typography } = DOCUMENT_PAGE_SPEC
   const content = normalizeParagraphsForLibreOffice(
     inlinePageBreakStyles(normalizeWhitespace(normalizeCssLengthsForLibreOffice(html))),
   )
-  const signatureLayer = signatures.length
-    ? `<div class="signature-export-layer">${signatures
-        .map(
-          (signature) =>
-            `<div style="position:absolute;left:${browserPixelsToPoints(signature.position.x)}pt;top:${browserPixelsToPoints(signature.position.y)}pt;width:${browserPixelsToPoints(signature.size.width)}pt;height:${browserPixelsToPoints(signature.size.height)}pt"><img src="${signature.dataUrl}" alt="${signature.signerName}" style="width:100%;height:100%;object-fit:contain;display:block"></div>`,
-        )
-        .join('')}</div>`
-    : ''
-
   return `<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -108,9 +86,8 @@ export function buildExportHtml({
     th { background: #f0f0f0; font-weight: 600; }
     img { display: block; max-width: 100%; height: auto; margin: 8pt auto; }
     hr { margin: 16pt 0; border: 0; border-top: 1pt solid #ccc; }
-    .signature-export-layer { position: absolute; inset: 0; z-index: 9999; pointer-events: none; }
   </style>
 </head>
-<body><div class="document-export">${content}${signatureLayer}</div></body>
+<body><div class="document-export">${content}</div></body>
 </html>`
 }
