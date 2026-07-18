@@ -56,8 +56,7 @@
   font-size: 14px;
 }
 
-.approach-comparison,
-.approach-pros-cons {
+.approach-comparison {
   display: grid;
   max-width: 1160px;
   margin: 20px auto 0;
@@ -68,8 +67,7 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
-.approach-comparison article,
-.approach-pros-cons article {
+.approach-comparison article {
   padding: 14px 16px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 10px;
@@ -86,26 +84,14 @@
 }
 
 .approach-comparison p,
-.approach-comparison ol,
-.approach-pros-cons ul {
+.approach-comparison ol {
   margin: 7px 0 0;
   color: #b9c8d9;
   font-size: 12px;
 }
 
-.approach-comparison ol,
-.approach-pros-cons ul {
+.approach-comparison ol {
   padding-left: 18px;
-}
-
-.approach-pros-cons {
-  grid-template-columns: 1fr 1fr;
-}
-
-.approach-pros-cons h2 {
-  margin: 0;
-  color: #dceafa;
-  font-size: 13px;
 }
 
 .approach-instrument {
@@ -117,36 +103,6 @@
   background: rgba(20, 184, 166, 0.09);
   color: #baf7ee;
   font-size: 12px;
-}
-
-.approach-instrument canvas {
-  display: none;
-}
-
-.approach-checklist {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  max-width: 1160px;
-  margin: 12px auto 0;
-  gap: 7px;
-}
-
-.approach-checklist button {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 10px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 7px;
-  background: rgba(8, 25, 44, 0.55);
-  color: #afc0d4;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.approach-checklist button.checked {
-  border-color: rgba(52, 211, 153, 0.5);
-  color: #6ee7b7;
 }
 
 .sandbox-label {
@@ -174,14 +130,11 @@
 
 @media (max-width: 900px) {
   .approach-comparison { grid-template-columns: 1fr; }
-  .approach-checklist { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 600px) {
   .approach-title-row { display: block; }
   .approach-number { margin-bottom: 12px; }
-  .approach-pros-cons { grid-template-columns: 1fr; }
-  .approach-checklist { grid-template-columns: 1fr; }
   .sandbox-label { display: block; }
   .sandbox-label small { display: block; margin-top: 3px; }
 }
