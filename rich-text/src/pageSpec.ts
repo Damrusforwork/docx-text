@@ -24,7 +24,7 @@ export const DOCUMENT_PAGE_SPEC = {
   heightCm: 29.7,
   gapPx: 20,
   defaultMargins: {
-    top: 2.5,
+    top: 1,
     bottom: 2.5,
     left: 3,
     right: 1.5,

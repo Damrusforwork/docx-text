@@ -42,10 +42,24 @@ import { exportToPdf } from '../utils/exportPdf'
 import { importDocx } from '../utils/importDocx'
 import { importPdf } from '../utils/importPdf'
 
+const AlignableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      textAlign: {
+        default: 'center',
+        parseHTML: (element) => element.getAttribute('data-text-align') || 'center',
+        renderHTML: (attributes) => ({ 'data-text-align': attributes.textAlign }),
+      },
+    }
+  },
+})
+
 export default function Editor() {
   const [activeTemplate, setActiveTemplate] = useState<string>('internalMemo')
   const [importWarnings, setImportWarnings] = useState<string[]>([])
   const [showImportMenu, setShowImportMenu] = useState<boolean>(false)
+  const [exporting, setExporting] = useState<'PDF' | 'DOCX' | null>(null)
   const [margins, setMargins] = useState<PageMargins>({ ...DOCUMENT_PAGE_SPEC.defaultMargins })
   const [pdfMode, setPdfMode] = useState(false)
   const [pdfPages, setPdfPages] = useState<PdfPageData[]>([])
@@ -64,7 +78,17 @@ export default function Editor() {
       TableRow,
       TableCell,
       TableHeader,
-      Image.configure({ inline: false, allowBase64: true }),
+      AlignableImage.configure({
+        inline: false,
+        allowBase64: true,
+        resize: {
+          enabled: true,
+          directions: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+          minWidth: 50,
+          minHeight: 50,
+          alwaysPreserveAspectRatio: true,
+        },
+      }),
       Highlight,
       Underline,
       Placeholder.configure({ placeholder: 'เริ่มพิมพ์เอกสาร...' }),
@@ -85,6 +109,34 @@ export default function Editor() {
       element.style.removeProperty('--page-break-offset')
       element.style.removeProperty('--page-original-padding')
     })
+    const liveImageContainers = editor.view.dom.querySelectorAll<HTMLElement>(
+      '[data-resize-container][data-node="image"]',
+    )
+    clone.querySelectorAll<HTMLElement>('[data-resize-container][data-node="image"]').forEach((container, index) => {
+      const image = container.querySelector<HTMLImageElement>('img')
+      if (image) {
+        const liveImage = liveImageContainers[index]?.querySelector<HTMLImageElement>('img')
+        if (liveImage) {
+          const bounds = liveImage.getBoundingClientRect()
+          if (bounds.width > 0 && bounds.height > 0) {
+            const width = Math.round(bounds.width * 100) / 100
+            const height = Math.round(bounds.height * 100) / 100
+            image.setAttribute('width', String(width))
+            image.setAttribute('height', String(height))
+            image.style.width = `${width}px`
+            image.style.height = `${height}px`
+          }
+        }
+        const wrapper = document.createElement('div')
+        wrapper.className = 'image-export'
+        const textAlign = image.getAttribute('data-text-align')
+        wrapper.style.textAlign = textAlign === 'left' || textAlign === 'right'
+          ? textAlign
+          : 'center'
+        wrapper.appendChild(image)
+        container.replaceWith(wrapper)
+      }
+    })
     clone.querySelectorAll('.page-flow-break').forEach((element) => element.remove())
     return clone.innerHTML
   }, [editor])
@@ -99,25 +151,24 @@ export default function Editor() {
     [editor]
   )
 
-  const handleExportDocx = useCallback(() => {
-    if (!editor) return
-    const html = getPaginatedHtml()
-    exportToDocx({
-      html,
-      filename: `${activeTemplate}.docx`,
-      margins,
-    })
-  }, [editor, getPaginatedHtml, activeTemplate, margins])
-
-  const handleExportPdf = useCallback(() => {
-    if (!editor) return
-    const html = getPaginatedHtml()
-    exportToPdf({
-      html,
-      filename: `${activeTemplate}.pdf`,
-      margins,
-    })
-  }, [editor, getPaginatedHtml, activeTemplate, margins])
+  const handleExport = useCallback(async (format: 'PDF' | 'DOCX') => {
+    if (!editor || exporting) return
+    setExporting(format)
+    try {
+      const html = getPaginatedHtml()
+      const filename = `${activeTemplate}.${format.toLowerCase()}`
+      if (format === 'PDF') {
+        await exportToPdf({ html, filename, margins })
+      } else {
+        await exportToDocx({ html, filename, margins })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown export error'
+      window.alert(`ไม่สามารถ Export ${format} ได้\n${message}`)
+    } finally {
+      setExporting(null)
+    }
+  }, [editor, exporting, getPaginatedHtml, activeTemplate, margins])
 
   const handleImportFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,7 +308,7 @@ export default function Editor() {
   return (
     <div className="editor-wrapper">
       <div className="editor-header no-print">
-        <h1>Template + Import/Export</h1>
+        <h1>Rish text editer</h1>
       </div>
 
       <div className="toolbar no-print">
@@ -296,19 +347,21 @@ export default function Editor() {
         <div className="toolbar-group">
           <button
             className="toolbar-btn export-action"
-            onClick={handleExportDocx}
+            onClick={() => void handleExport('DOCX')}
+            disabled={Boolean(exporting)}
             title="Export as DOCX"
           >
             <FileDown size={16} />
-            <span>DOCX</span>
+            <span>{exporting === 'DOCX' ? 'กำลังสร้าง...' : 'DOCX'}</span>
           </button>
           <button
             className="toolbar-btn export-action"
-            onClick={handleExportPdf}
+            onClick={() => void handleExport('PDF')}
+            disabled={Boolean(exporting)}
             title="Export as PDF"
           >
             <FileDown size={16} />
-            <span>PDF</span>
+            <span>{exporting === 'PDF' ? 'กำลังสร้าง...' : 'PDF'}</span>
           </button>
 
           <div className="import-wrapper">
@@ -347,6 +400,13 @@ export default function Editor() {
           </div>
         </div>
       </div>
+
+      {exporting && (
+        <div className="export-progress no-print" role="status" aria-live="polite">
+          <span className="export-spinner" aria-hidden="true" />
+          กำลังสร้างไฟล์ {exporting} กรุณารอสักครู่...
+        </div>
+      )}
 
       {importWarnings.length > 0 && (
         <div className="import-warnings no-print">

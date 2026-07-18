@@ -4,6 +4,8 @@ import { promisify } from 'util'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
+import { fileURLToPath, pathToFileURL } from 'url'
+import JSZip = require('jszip')
 
 const execFileAsync = promisify(execFile)
 
@@ -112,7 +114,10 @@ export class ConvertService implements OnModuleInit {
 
     fs.mkdirSync(outputDir, { recursive: true })
 
-    const styledHtml = this.wrapHtmlWithStyles(html)
+    const styledHtml = this.materializeEmbeddedImages(
+      this.wrapHtmlWithStyles(html),
+      tmpDir,
+    )
     fs.writeFileSync(inputPath, styledHtml, 'utf-8')
 
     try {
@@ -138,7 +143,10 @@ export class ConvertService implements OnModuleInit {
 
     fs.mkdirSync(outputDir, { recursive: true })
 
-    const styledHtml = this.wrapHtmlWithStyles(html)
+    const styledHtml = this.materializeEmbeddedImages(
+      this.wrapHtmlWithStyles(html),
+      tmpDir,
+    )
     fs.writeFileSync(inputPath, styledHtml, 'utf-8')
 
     try {
@@ -158,7 +166,7 @@ export class ConvertService implements OnModuleInit {
         throw new Error('LibreOffice did not produce a DOCX file')
       }
       const docxPath = path.join(outputDir, docxFiles[0])
-      return fs.readFileSync(docxPath)
+      return await this.embedExternalImages(fs.readFileSync(docxPath), tmpDir)
     } finally {
       this.cleanupDir(tmpDir)
     }
@@ -251,6 +259,98 @@ ${dirEntries}
 ${html}
 </body>
 </html>`
+  }
+
+  private materializeEmbeddedImages(html: string, tmpDir: string): string {
+    let imageIndex = 0
+    return html.replace(
+      /(\bsrc\s*=\s*)(["'])data:image\/(png|jpe?g);base64,([^"']+)\2/gi,
+      (_, prefix: string, quote: string, type: string, encoded: string) => {
+        const compact = encoded
+          .replace(/\s/g, '')
+          .replace(/-/g, '+')
+          .replace(/_/g, '/')
+        if (!/^[A-Za-z0-9+/]*={0,2}$/.test(compact)) {
+          throw new Error('Invalid base64 image data')
+        }
+
+        const unpadded = compact.replace(/=+$/, '')
+        if (unpadded.length % 4 === 1) {
+          throw new Error('Invalid base64 image data')
+        }
+        const base64 = unpadded.padEnd(Math.ceil(unpadded.length / 4) * 4, '=')
+        const buffer = Buffer.from(base64, 'base64')
+        const normalizedType = type.toLowerCase() === 'png' ? 'png' : 'jpg'
+        const validSignature = normalizedType === 'png'
+          ? buffer.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+          : buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
+        if (!validSignature) {
+          throw new Error(`Invalid ${normalizedType.toUpperCase()} image data`)
+        }
+
+        const imagePath = path.join(tmpDir, `image-${imageIndex++}.${normalizedType}`)
+        fs.writeFileSync(imagePath, buffer)
+        return `${prefix}${quote}${pathToFileURL(imagePath).href}${quote}`
+      },
+    )
+  }
+
+  private async embedExternalImages(docx: Buffer, tmpDir: string): Promise<Buffer> {
+    const zip = await JSZip.loadAsync(docx)
+    const relationshipsPath = 'word/_rels/document.xml.rels'
+    const relationshipsFile = zip.file(relationshipsPath)
+    if (!relationshipsFile) return docx
+
+    let relationships = await relationshipsFile.async('string')
+    const embeddedExtensions = new Set<string>()
+    let imageIndex = 0
+    relationships = relationships.replace(/<Relationship\b[^>]*\/>/g, (relationship) => {
+      const isExternalImage = /Type="[^"]*\/image"/.test(relationship)
+        && /TargetMode="External"/.test(relationship)
+      if (!isExternalImage) return relationship
+
+      const target = relationship.match(/Target="([^"]+)"/)?.[1]
+      if (!target?.startsWith('file:')) return relationship
+
+      const targetPath = fileURLToPath(target.replace(/&amp;/g, '&'))
+      const sourceName = path.basename(targetPath)
+      if (!/^image-\d+\.(?:png|jpe?g)$/i.test(sourceName)) {
+        throw new Error('DOCX image target is outside the conversion directory')
+      }
+      const imagePath = path.join(tmpDir, sourceName)
+      if (!fs.existsSync(imagePath)) throw new Error('DOCX image file is missing')
+
+      const extension = path.extname(imagePath).slice(1).toLowerCase()
+      if (!['png', 'jpg', 'jpeg'].includes(extension)) {
+        throw new Error(`Unsupported DOCX image type: ${extension}`)
+      }
+
+      const mediaName = `image-${imageIndex++}.${extension}`
+      zip.file(`word/media/${mediaName}`, fs.readFileSync(imagePath))
+      embeddedExtensions.add(extension)
+      return relationship
+        .replace(/\sTargetMode="External"/, '')
+        .replace(/Target="[^"]+"/, `Target="media/${mediaName}"`)
+    })
+
+    if (imageIndex === 0) return docx
+    zip.file(relationshipsPath, relationships)
+
+    const contentTypesPath = '[Content_Types].xml'
+    const contentTypesFile = zip.file(contentTypesPath)
+    if (!contentTypesFile) throw new Error('DOCX content types file is missing')
+    let contentTypes = await contentTypesFile.async('string')
+    for (const extension of embeddedExtensions) {
+      if (new RegExp(`Extension="${extension}"`, 'i').test(contentTypes)) continue
+      const contentType = extension === 'png' ? 'image/png' : 'image/jpeg'
+      contentTypes = contentTypes.replace(
+        '</Types>',
+        `<Default Extension="${extension}" ContentType="${contentType}"/></Types>`,
+      )
+    }
+    zip.file(contentTypesPath, contentTypes)
+
+    return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
   }
 
   private async runLibreOffice(

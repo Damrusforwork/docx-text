@@ -7,6 +7,29 @@ interface BuildExportHtmlOptions {
   margins: DocumentMargins
 }
 
+function protectEmbeddedImages(html: string): {
+  html: string
+  restore: (value: string) => string
+} {
+  const images: string[] = []
+  const protectedHtml = html.replace(
+    /(\bsrc\s*=\s*["'])(data:image\/(?:png|jpe?g);base64,[^"']+)(["'])/gi,
+    (_, prefix: string, image: string, suffix: string) => {
+      const token = `DOC_EMBEDDED_IMAGE_${images.length}`
+      images.push(image)
+      return `${prefix}${token}${suffix}`
+    },
+  )
+
+  return {
+    html: protectedHtml,
+    restore: (value) => value.replace(
+      /DOC_EMBEDDED_IMAGE_(\d+)/g,
+      (_, index: string) => images[Number.parseInt(index, 10)],
+    ),
+  }
+}
+
 function normalizeWhitespace(html: string): string {
   return html.replace(/ {2,}/g, (match) => '&nbsp;'.repeat(match.length))
 }
@@ -60,8 +83,13 @@ export function buildExportHtml({
   margins,
 }: BuildExportHtmlOptions): string {
   const { widthCm, heightCm, typography } = DOCUMENT_PAGE_SPEC
-  const content = normalizeParagraphsForLibreOffice(
-    inlinePageBreakStyles(normalizeWhitespace(normalizeCssLengthsForLibreOffice(html))),
+  const embeddedImages = protectEmbeddedImages(html)
+  const content = embeddedImages.restore(
+    normalizeParagraphsForLibreOffice(
+      inlinePageBreakStyles(
+        normalizeWhitespace(normalizeCssLengthsForLibreOffice(embeddedImages.html)),
+      ),
+    ),
   )
   return `<!DOCTYPE html>
 <html lang="th">
@@ -85,6 +113,8 @@ export function buildExportHtml({
     td, th { padding: 8pt 12pt; border: 1pt solid #000; font-size: 14pt; text-align: left; }
     th { background: #f0f0f0; font-weight: 600; }
     img { display: block; max-width: 100%; height: auto; margin: 8pt auto; }
+    .image-export { margin: 8pt 0; text-align: center; }
+    .image-export img { display: inline-block; margin: 0; }
     hr { margin: 16pt 0; border: 0; border-top: 1pt solid #ccc; }
   </style>
 </head>

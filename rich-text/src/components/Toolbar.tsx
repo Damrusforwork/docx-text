@@ -160,7 +160,19 @@ export default function Toolbar({ editor }: ToolbarProps) {
 
   useEffect(() => {
     if (!editor) return
-    const handler = () => forceUpdate((n) => n + 1)
+    const handler = () => {
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name !== 'image') return
+        const dom = editor.view.nodeDOM(pos)
+        const image = dom instanceof HTMLImageElement
+          ? dom
+          : dom instanceof HTMLElement
+            ? dom.querySelector('img')
+            : null
+        image?.setAttribute('data-text-align', node.attrs.textAlign || 'center')
+      })
+      forceUpdate((n) => n + 1)
+    }
     editor.on('selectionUpdate', handler)
     editor.on('update', handler)
     return () => {
@@ -210,6 +222,20 @@ export default function Toolbar({ editor }: ToolbarProps) {
   const rawFontFamily = readCurrentFontFamily(editor)
   const currentFontFamily = matchFontFamily(rawFontFamily)
   const currentFontSize = readCurrentFontSize(editor)
+  const imageSelected = editor.isActive('image')
+  const setAlignment = (textAlign: 'left' | 'center' | 'right') => {
+    const chain = editor.chain().focus()
+    if (imageSelected) {
+      chain.updateAttributes('image', { textAlign }).run()
+    } else {
+      chain.setTextAlign(textAlign).run()
+    }
+  }
+  const isAlignmentActive = (textAlign: 'left' | 'center' | 'right') => (
+    imageSelected
+      ? editor.getAttributes('image').textAlign === textAlign
+      : editor.isActive({ textAlign })
+  )
 
   const matchedOption = FONT_OPTIONS.find((f) => f.value === currentFontFamily)
   const displayFontName = matchedOption ? matchedOption.displayFont : 'Arial'
@@ -344,22 +370,22 @@ export default function Toolbar({ editor }: ToolbarProps) {
 
       <div className="toolbar-group">
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          isActive={editor.isActive({ textAlign: 'left' })}
+          onClick={() => setAlignment('left')}
+          isActive={isAlignmentActive('left')}
           title="ชิดซ้าย"
         >
           <AlignLeft size={16} />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          isActive={editor.isActive({ textAlign: 'center' })}
+          onClick={() => setAlignment('center')}
+          isActive={isAlignmentActive('center')}
           title="กึ่งกลาง"
         >
           <AlignCenter size={16} />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          isActive={editor.isActive({ textAlign: 'right' })}
+          onClick={() => setAlignment('right')}
+          isActive={isAlignmentActive('right')}
           title="ชิดขวา"
         >
           <AlignRight size={16} />
@@ -367,6 +393,7 @@ export default function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           onClick={() => editor.chain().focus().setTextAlign('justify').run()}
           isActive={editor.isActive({ textAlign: 'justify' })}
+          disabled={imageSelected}
           title="จัดเต็มแถว"
         >
           <AlignJustify size={16} />

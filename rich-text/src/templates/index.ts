@@ -1,3 +1,5 @@
+import blaze01 from '../assets/picture/blaze01.png?inline'
+
 export interface Template {
   name: string
   description: string
@@ -9,6 +11,7 @@ export const templates: Record<string, Template> = {
     name: 'หนังสือภายใน (Internal Memorandum)',
     description: 'หนังสือติดต่อภายในองค์กร',
     content: `
+<img src="${blaze01}" alt="ตราสัญลักษณ์" width="80" data-text-align="center">
 <h1 style="text-align: center;">หนังสือภายใน</h1>
 <h2 style="text-align: center;">Internal Memorandum</h2>
 
