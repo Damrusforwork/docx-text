@@ -222,6 +222,8 @@ export default function Toolbar({ editor }: ToolbarProps) {
   const rawFontFamily = readCurrentFontFamily(editor)
   const currentFontFamily = matchFontFamily(rawFontFamily)
   const currentFontSize = readCurrentFontSize(editor)
+  const selectedColor = editor.getAttributes('textStyle').color
+  const currentTextColor = /^#[0-9a-f]{6}$/i.test(selectedColor) ? selectedColor : '#000000'
   const imageSelected = editor.isActive('image')
   const setAlignment = (textAlign: 'left' | 'center' | 'right') => {
     const chain = editor.chain().focus()
@@ -364,6 +366,15 @@ export default function Toolbar({ editor }: ToolbarProps) {
         >
           <Highlighter size={16} />
         </ToolbarButton>
+        <label className="text-color-picker" title="สีตัวอักษร">
+          <span style={{ borderBottomColor: currentTextColor }}>A</span>
+          <input
+            type="color"
+            value={currentTextColor}
+            onChange={(event) => editor.chain().focus().setColor(event.target.value).run()}
+            aria-label="เลือกสีตัวอักษร"
+          />
+        </label>
       </div>
 
       <ToolbarDivider />
