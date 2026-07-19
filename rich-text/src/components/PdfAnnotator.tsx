@@ -184,7 +184,8 @@ export default function PdfAnnotator({ pages, pdfData, onExit }: PdfAnnotatorPro
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Export failed:', err)
-      alert('Export failed: ' + (err as Error).message)
+      console.error('PDF annotation export failed', err)
+      alert('ไม่สามารถส่งออก PDF ที่แก้ไขแล้วได้')
     } finally {
       setExporting(false)
     }

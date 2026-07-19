@@ -6,6 +6,9 @@ rich-text-back/node_modules/
 rich-text-back/dist/
 rich-text/.vite/
 *.log
+.env
+.env.*
+.env.example
 .DS_Store
 Thumbs.db
 rich-text/.playwright-mcp/

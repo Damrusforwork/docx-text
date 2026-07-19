@@ -2,16 +2,19 @@ import { NestFactory } from '@nestjs/core'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { AppModule } from './app.module'
+import { ApiExceptionFilter } from './api-exception.filter'
+import { BACKEND_CONFIG } from './config'
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
+  app.useGlobalFilters(new ApiExceptionFilter())
   app.setGlobalPrefix('api')
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: BACKEND_CONFIG.corsOrigins,
     methods: ['GET', 'POST'],
   })
-  app.useBodyParser('json', { limit: '50mb' })
-  app.useBodyParser('urlencoded', { limit: '50mb', extended: true })
+  app.useBodyParser('json', { limit: BACKEND_CONFIG.jsonBodyLimit })
+  app.useBodyParser('urlencoded', { limit: BACKEND_CONFIG.jsonBodyLimit, extended: true })
 
   const config = new DocumentBuilder()
     .setTitle('Doc Convert API')
@@ -21,8 +24,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config)
   SwaggerModule.setup('docs', app, document)
 
-  await app.listen(3001)
-  console.log('Backend running on http://localhost:3001')
-  console.log('Swagger docs at http://localhost:3001/docs')
+  await app.listen(BACKEND_CONFIG.port)
+  console.log(`Backend running on http://localhost:${BACKEND_CONFIG.port}`)
+  console.log(`Swagger docs at http://localhost:${BACKEND_CONFIG.port}/docs`)
 }
 bootstrap()

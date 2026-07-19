@@ -1,39 +1,19 @@
-import { buildExportHtml, type DocumentMargins } from './documentExport'
-import { DOCUMENT_PAGE_SPEC } from '../pageSpec'
-
-const API_BASE = 'http://localhost:3001/api'
+import { downloadBlob, requestExport } from './apiClient'
+import type { RenderManifest } from '../rendering/documentRenderer'
 
 interface ExportDocxOptions {
   html: string
   filename?: string
-  margins?: DocumentMargins
+  renderManifest?: RenderManifest
+  signal?: AbortSignal
 }
 
 export async function exportToDocx({
   html,
   filename = "document.docx",
-  margins = DOCUMENT_PAGE_SPEC.defaultMargins,
+  renderManifest,
+  signal,
 }: ExportDocxOptions) {
-  const fullHtml = buildExportHtml({ html, margins })
-
-  const response = await fetch(`${API_BASE}/convert/docx`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ html: fullHtml, filename }),
-  })
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`DOCX conversion failed: ${response.status} ${text}`)
-  }
-
-  const blob = await response.blob()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  const blob = await requestExport('docx', { html, filename, renderManifest }, signal)
+  downloadBlob(blob, filename)
 }

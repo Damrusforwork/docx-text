@@ -3,14 +3,14 @@ import blaze01 from '../assets/picture/blaze01.png?inline'
 export interface Template {
   name: string
   description: string
-  content: string
+  html: string
 }
 
 export const templates: Record<string, Template> = {
   internalMemo: {
     name: 'หนังสือภายใน (Internal Memorandum)',
     description: 'หนังสือติดต่อภายในองค์กร',
-    content: `
+    html: `
 <img src="${blaze01}" alt="ตราสัญลักษณ์" width="80" data-text-align="center">
 <h1 style="text-align: center;">หนังสือภายใน</h1>
 <h2 style="text-align: center;">Internal Memorandum</h2>
@@ -49,7 +49,7 @@ export const templates: Record<string, Template> = {
   officialLetter: {
     name: 'หนังสือประทับตรา (Official Sealed Letter)',
     description: 'หนังสือราชการภายนอกประทับตรา',
-    content: `
+    html: `
 <h1 style="text-align: center;">หนังสือราชการ</h1>
 
 <p style="text-align: right;">ส่วนราชการ: กรมการปกครอง</p>
@@ -109,7 +109,7 @@ export const templates: Record<string, Template> = {
   memoNote: {
     name: 'บันทึกข้อความ (Internal Note)',
     description: 'บันทึกข้อความภายในสำหรับสั่งการ/เสนอความเห็น',
-    content: `
+    html: `
 <h1 style="text-align: center;">บันทึกข้อความ</h1>
 
 <p>&nbsp;</p>

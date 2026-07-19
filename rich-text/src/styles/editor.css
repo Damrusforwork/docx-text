@@ -460,6 +460,19 @@
   font-weight: 600;
 }
 
+.export-cancel {
+  padding: 4px 10px;
+  border: 1px solid #aab7cf;
+  border-radius: 4px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.export-cancel:hover {
+  background: #f1f5f9;
+}
+
 .export-spinner {
   width: 16px;
   height: 16px;

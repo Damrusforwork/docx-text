@@ -19,7 +19,7 @@ const UNIQUE_ID_META = 'paginationLayoutIds'
 const PAGINATION_PLUGIN_KEY = new PluginKey<PageBreakDecoration[]>('paginationState')
 
 function createLayoutId(): string {
-  return globalThis.crypto?.randomUUID?.() ?? `layout-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return globalThis.crypto.randomUUID()
 }
 
 export function normalizeLayoutIds(
@@ -87,7 +87,7 @@ export const PaginationState = Extension.create({
         if (transactions.some((transaction) => transaction.getMeta(UNIQUE_ID_META))) return null
 
         const nodes: Array<{ offset: number; id: string | null }> = []
-        state.doc.forEach((node, offset) => {
+        state.doc.descendants((node, offset) => {
           if (BLOCK_TYPES.includes(node.type.name)) {
             nodes.push({ offset, id: (node.attrs.layoutId as string | null) ?? null })
           }

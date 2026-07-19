@@ -1,7 +1,8 @@
 import mammoth from 'mammoth'
+import { validateImportFile } from './importValidation'
 
 export async function importDocx(file: File) {
-  const arrayBuffer = await file.arrayBuffer()
+  const arrayBuffer = await validateImportFile(file, 'docx')
 
   const result = await mammoth.convertToHtml(
     { arrayBuffer },

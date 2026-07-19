@@ -1,37 +1,88 @@
 import { PDFDocument } from 'pdf-lib'
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { mkdir, writeFile } from 'node:fs/promises'
-import { templates } from '../src/templates/index.ts'
-import { buildExportHtml } from '../src/utils/documentExport.ts'
+import { DOCUMENT_PAGE_SPEC } from '../src/pageSpec.ts'
+import { renderHtmlForExport } from '../src/rendering/documentRenderer.ts'
+import { LAYOUT_TOLERANCE } from '../src/rendering/layoutTolerance.ts'
+import { GOLDEN_EXPORT_FIXTURES } from './fixtures/export-golden-fixtures.mjs'
 
-const API_URL = 'http://127.0.0.1:3001/api/convert/pdf'
-const MARGINS = { top: 2.5, bottom: 2.5, left: 3, right: 1.5 }
+try {
+  process.loadEnvFile()
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error
+}
 
-async function exportFixture(editorHtml, filename) {
-  const html = buildExportHtml({ html: editorHtml, margins: MARGINS })
+const API_URL = process.env.VERIFY_EXPORT_API_URL || 'http://127.0.0.1:3001/api/convert/pdf'
+
+async function exportFixture(fixture) {
+  const html = renderHtmlForExport(
+    fixture.html.replace(/>\s+</g, '><'),
+    DOCUMENT_PAGE_SPEC.defaultMargins,
+    'pdf',
+  )
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ html, filename }),
+    body: JSON.stringify({ html, filename: `${fixture.id}.pdf` }),
   })
-  if (!response.ok) {
-    throw new Error(`Export API returned ${response.status}: ${await response.text()}`)
-  }
+  if (!response.ok) throw new Error(`Export API returned ${response.status}`)
+  return new Uint8Array(await response.arrayBuffer())
+}
+
+function multiply(left, right) {
+  const [a1, b1, c1, d1, e1, f1] = left
+  const [a2, b2, c2, d2, e2, f2] = right
+  return [
+    a1 * a2 + c1 * b2,
+    b1 * a2 + d1 * b2,
+    a1 * c2 + c1 * d2,
+    b1 * c2 + d1 * d2,
+    a1 * e2 + c1 * f2 + e1,
+    b1 * e2 + d1 * f2 + f1,
+  ]
+}
+
+function boundsFromMatrix([a, b, c, d, e, f]) {
+  const points = [[e, f], [a + e, b + f], [c + e, d + f], [a + c + e, b + d + f]]
+  const xs = points.map(([x]) => x)
+  const ys = points.map(([, y]) => y)
   return {
-    bytes: new Uint8Array(await response.arrayBuffer()),
-    controlledParagraphs: html.split('doc-paragraph').length - 1,
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
   }
+}
+
+async function imageBounds(page) {
+  const operators = await page.getOperatorList()
+  const stack = []
+  let transform = [1, 0, 0, 1, 0, 0]
+  const images = []
+  for (let index = 0; index < operators.fnArray.length; index += 1) {
+    const operation = operators.fnArray[index]
+    if (operation === OPS.save) stack.push([...transform])
+    else if (operation === OPS.restore) transform = stack.pop() || [1, 0, 0, 1, 0, 0]
+    else if (operation === OPS.transform) transform = multiply(transform, operators.argsArray[index])
+    else if ([OPS.paintImageXObject, OPS.paintJpegXObject, OPS.paintInlineImageXObject].includes(operation)) {
+      images.push(boundsFromMatrix(transform))
+    }
+  }
+  return images
 }
 
 async function inspectPdf(bytes) {
   const pdf = await PDFDocument.load(bytes)
-  const parsedPdf = await getDocument({ data: bytes.slice(), disableWorker: true }).promise
+  const parsed = await getDocument({ data: bytes.slice(), disableWorker: true }).promise
   const pages = []
-  for (let pageNumber = 1; pageNumber <= parsedPdf.numPages; pageNumber += 1) {
-    const page = await parsedPdf.getPage(pageNumber)
+  for (let pageNumber = 1; pageNumber <= parsed.numPages; pageNumber += 1) {
+    const page = await parsed.getPage(pageNumber)
     const content = await page.getTextContent()
-    pages.push(content.items.filter((item) => 'str' in item && item.str.trim()))
+    pages.push({
+      text: content.items.filter((item) => 'str' in item).map((item) => item.str).join(' '),
+      items: content.items.filter((item) => 'str' in item && item.str.trim()),
+      images: await imageBounds(page),
+    })
   }
+  await parsed.destroy()
   return { pageCount: pdf.getPageCount(), pages }
 }
 
@@ -45,36 +96,54 @@ function dominantBaselineGap(items) {
   return [...frequencies].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0
 }
 
-const baseEditorHtml = templates.internalMemo.content.replace(/>\s+</g, '><')
-const baseFixture = await exportFixture(baseEditorHtml, 'parity-base.pdf')
-const basePdf = await inspectPdf(baseFixture.bytes)
-const baselineGap = dominantBaselineGap(basePdf.pages[0])
-
-console.log(`Base PDF pages: ${basePdf.pageCount}`)
-console.log(`Paragraph baseline gap: ${baselineGap}pt`)
-console.log(`Controlled paragraphs: ${baseFixture.controlledParagraphs}`)
-
-if (basePdf.pageCount !== 1) {
-  throw new Error(`Expected the internal memo fixture to fit on 1 page, got ${basePdf.pageCount}`)
-}
-if (Math.abs(baselineGap - 24) > 1) {
-  throw new Error(`Expected a 24pt paragraph baseline gap, got ${baselineGap}pt`)
+function assertTextOrder(text, expected, fixtureId) {
+  let offset = 0
+  for (const token of expected) {
+    const nextOffset = text.indexOf(token, offset)
+    if (nextOffset < 0) throw new Error(`${fixtureId}: missing or out-of-order text "${token}"`)
+    offset = nextOffset + token.length
+  }
 }
 
-const boundaryEditorHtml = `${baseEditorHtml}<p data-page-break-before="true">&nbsp;</p><p>ssss</p>`
-const boundaryFixture = await exportFixture(boundaryEditorHtml, 'parity-boundary.pdf')
-const boundaryPdf = await inspectPdf(boundaryFixture.bytes)
-const markerPage = boundaryPdf.pages.findIndex((items) =>
-  items.some((item) => item.str.includes('ssss')),
-) + 1
+const report = []
+await mkdir('../output/pdf/golden', { recursive: true })
 
-console.log(`Forced-break PDF pages: ${boundaryPdf.pageCount}`)
-console.log(`Browser marker "ssss" page: ${markerPage}`)
+for (const fixture of GOLDEN_EXPORT_FIXTURES) {
+  const bytes = await exportFixture(fixture)
+  const pdf = await inspectPdf(bytes)
+  const allText = pdf.pages.map((page) => page.text).join(' ')
+  if (Math.abs(pdf.pageCount - fixture.expected.pageCount) > LAYOUT_TOLERANCE.pageCount) {
+    throw new Error(`${fixture.id}: expected ${fixture.expected.pageCount} pages, got ${pdf.pageCount}`)
+  }
+  assertTextOrder(allText, fixture.expected.textOrder, fixture.id)
 
-if (markerPage !== 2) {
-  throw new Error(`Expected marker "ssss" on page 2, got page ${markerPage || 'not found'}`)
+  if (fixture.expected.baselinePt) {
+    const baseline = dominantBaselineGap(pdf.pages[0].items)
+    if (Math.abs(baseline - fixture.expected.baselinePt) > LAYOUT_TOLERANCE.baselinePt) {
+      throw new Error(`${fixture.id}: expected ${fixture.expected.baselinePt}pt baseline, got ${baseline}pt`)
+    }
+  }
+  if (fixture.expected.imageBoundsPt) {
+    const bounds = pdf.pages.flatMap((page) => page.images)[0]
+    if (!bounds
+      || Math.abs(bounds.width - fixture.expected.imageBoundsPt.width) > LAYOUT_TOLERANCE.imageBoundsPt
+      || Math.abs(bounds.height - fixture.expected.imageBoundsPt.height) > LAYOUT_TOLERANCE.imageBoundsPt) {
+      throw new Error(`${fixture.id}: image bounds outside tolerance`)
+    }
+  }
+  if (fixture.expected.marker) {
+    const markerPage = pdf.pages.findIndex((page) => page.text.includes(fixture.expected.marker.text)) + 1
+    if (markerPage !== fixture.expected.marker.page) {
+      throw new Error(`${fixture.id}: marker rendered on page ${markerPage}`)
+    }
+  }
+
+  await writeFile(`../output/pdf/golden/${fixture.id}.pdf`, bytes)
+  report.push({ id: fixture.id, pageCount: pdf.pageCount, passed: true })
 }
 
-await mkdir('../output/pdf', { recursive: true })
-await writeFile('../output/pdf/browser-export-pagination-parity.pdf', boundaryFixture.bytes)
-console.log('Saved: output/pdf/browser-export-pagination-parity.pdf')
+await writeFile('../output/pdf/golden/report.json', JSON.stringify({
+  tolerance: LAYOUT_TOLERANCE,
+  fixtures: report,
+}, null, 2))
+console.log(`Golden export fixtures: ${report.length} passed`)

@@ -6,10 +6,14 @@ import * as path from 'path'
 import * as os from 'os'
 import { fileURLToPath, pathToFileURL } from 'url'
 import JSZip = require('jszip')
+import { BACKEND_CONFIG } from './config'
 
 const execFileAsync = promisify(execFile)
 
 const FONTS_DIR = path.join(__dirname, '..', '..', 'fonts')
+
+export class ConversionTimeoutError extends Error {}
+export class InvalidDocumentError extends Error {}
 
 @Injectable()
 export class ConvertService implements OnModuleInit {
@@ -105,8 +109,9 @@ export class ConvertService implements OnModuleInit {
     this.logger.log('Fonts installed to Linux user profile')
   }
 
-  async convertHtmlToPdf(html: string): Promise<Buffer> {
+  async convertHtmlToPdf(html: string, signal?: AbortSignal): Promise<Buffer> {
     this.installFontsToSystem()
+    signal?.throwIfAborted()
 
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'docx-convert-'))
     const inputPath = path.join(tmpDir, 'input.html')
@@ -114,15 +119,14 @@ export class ConvertService implements OnModuleInit {
 
     fs.mkdirSync(outputDir, { recursive: true })
 
-    const styledHtml = this.materializeEmbeddedImages(
-      this.wrapHtmlWithStyles(html),
-      tmpDir,
-    )
-    fs.writeFileSync(inputPath, styledHtml, 'utf-8')
-
     try {
+      const styledHtml = this.materializeEmbeddedImages(
+        this.wrapHtmlWithStyles(html),
+        tmpDir,
+      )
+      fs.writeFileSync(inputPath, styledHtml, 'utf-8')
       const env = this.buildLibreOfficeEnv(tmpDir)
-      await this.runLibreOffice(inputPath, outputDir, 'pdf', env)
+      await this.runLibreOffice(inputPath, outputDir, 'pdf', env, signal)
       const pdfFiles = fs.readdirSync(outputDir).filter((f) => f.endsWith('.pdf'))
       if (pdfFiles.length === 0) {
         throw new Error('LibreOffice did not produce a PDF file')
@@ -134,8 +138,9 @@ export class ConvertService implements OnModuleInit {
     }
   }
 
-  async convertHtmlToDocx(html: string): Promise<Buffer> {
+  async convertHtmlToDocx(html: string, signal?: AbortSignal): Promise<Buffer> {
     this.installFontsToSystem()
+    signal?.throwIfAborted()
 
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'docx-convert-'))
     const inputPath = path.join(tmpDir, 'input.html')
@@ -143,29 +148,30 @@ export class ConvertService implements OnModuleInit {
 
     fs.mkdirSync(outputDir, { recursive: true })
 
-    const styledHtml = this.materializeEmbeddedImages(
-      this.wrapHtmlWithStyles(html),
-      tmpDir,
-    )
-    fs.writeFileSync(inputPath, styledHtml, 'utf-8')
-
     try {
+      const styledHtml = this.materializeEmbeddedImages(
+        this.wrapHtmlWithStyles(html),
+        tmpDir,
+      )
+      fs.writeFileSync(inputPath, styledHtml, 'utf-8')
       const env = this.buildLibreOfficeEnv(tmpDir)
 
-      await this.runLibreOffice(inputPath, outputDir, 'odt', env)
+      await this.runLibreOffice(inputPath, outputDir, 'odt', env, signal)
       const odtFiles = fs.readdirSync(outputDir).filter((f) => f.endsWith('.odt'))
       if (odtFiles.length === 0) {
         throw new Error('LibreOffice did not produce an ODT file')
       }
 
       const odtPath = path.join(outputDir, odtFiles[0])
-      await this.runLibreOffice(odtPath, outputDir, 'docx', env)
+      signal?.throwIfAborted()
+      await this.runLibreOffice(odtPath, outputDir, 'docx', env, signal)
 
       const docxFiles = fs.readdirSync(outputDir).filter((f) => f.endsWith('.docx'))
       if (docxFiles.length === 0) {
         throw new Error('LibreOffice did not produce a DOCX file')
       }
       const docxPath = path.join(outputDir, docxFiles[0])
+      signal?.throwIfAborted()
       return await this.embedExternalImages(fs.readFileSync(docxPath), tmpDir)
     } finally {
       this.cleanupDir(tmpDir)
@@ -262,30 +268,46 @@ ${html}
   }
 
   private materializeEmbeddedImages(html: string, tmpDir: string): string {
+    const imageSources = [...html.matchAll(/<img\b[^>]*\bsrc\s*=\s*(["'])([^"']+)\1/gi)]
+      .map((match) => match[2])
+    if (imageSources.length > BACKEND_CONFIG.maxEmbeddedImages) {
+      throw new InvalidDocumentError('Embedded image count exceeds the configured limit')
+    }
+    if (imageSources.some((source) => !/^data:image\/(?:png|jpe?g);base64,/i.test(source))) {
+      throw new InvalidDocumentError('External or unsupported image source')
+    }
     let imageIndex = 0
+    let imageBytes = 0
     return html.replace(
       /(\bsrc\s*=\s*)(["'])data:image\/(png|jpe?g);base64,([^"']+)\2/gi,
       (_, prefix: string, quote: string, type: string, encoded: string) => {
+        if (imageIndex >= BACKEND_CONFIG.maxEmbeddedImages) {
+          throw new InvalidDocumentError('Embedded image count exceeds the configured limit')
+        }
         const compact = encoded
           .replace(/\s/g, '')
           .replace(/-/g, '+')
           .replace(/_/g, '/')
         if (!/^[A-Za-z0-9+/]*={0,2}$/.test(compact)) {
-          throw new Error('Invalid base64 image data')
+          throw new InvalidDocumentError('Invalid base64 image data')
         }
 
         const unpadded = compact.replace(/=+$/, '')
         if (unpadded.length % 4 === 1) {
-          throw new Error('Invalid base64 image data')
+          throw new InvalidDocumentError('Invalid base64 image data')
         }
         const base64 = unpadded.padEnd(Math.ceil(unpadded.length / 4) * 4, '=')
         const buffer = Buffer.from(base64, 'base64')
+        imageBytes += buffer.length
+        if (imageBytes > BACKEND_CONFIG.maxEmbeddedImageBytes) {
+          throw new InvalidDocumentError('Embedded image data exceeds the configured limit')
+        }
         const normalizedType = type.toLowerCase() === 'png' ? 'png' : 'jpg'
         const validSignature = normalizedType === 'png'
           ? buffer.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))
           : buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
         if (!validSignature) {
-          throw new Error(`Invalid ${normalizedType.toUpperCase()} image data`)
+          throw new InvalidDocumentError(`Invalid ${normalizedType.toUpperCase()} image data`)
         }
 
         const imagePath = path.join(tmpDir, `image-${imageIndex++}.${normalizedType}`)
@@ -358,6 +380,7 @@ ${html}
     outputDir: string,
     format: string,
     env: Record<string, string>,
+    signal?: AbortSignal,
   ): Promise<void> {
     const soffice = this.findLibreOffice()
     this.logger.log(`Running: ${soffice} --headless --convert-to ${format} --outdir ${outputDir} ${inputPath}`)
@@ -370,12 +393,14 @@ ${html}
         '--outdir',
         outputDir,
         inputPath,
-      ], { timeout: 60000, env })
+      ], { timeout: BACKEND_CONFIG.libreOfficeTimeoutMs, env, signal })
       this.logger.log(`LibreOffice stdout: ${stdout}`)
       if (stderr) this.logger.warn(`LibreOffice stderr: ${stderr}`)
     } catch (err: any) {
       this.logger.error(`LibreOffice error: ${err.message}`)
-      throw new Error(`LibreOffice conversion failed: ${err.message}`)
+      if (signal?.aborted || err?.name === 'AbortError') throw err
+      if (err?.killed || err?.code === 'ETIMEDOUT') throw new ConversionTimeoutError()
+      throw new Error('LibreOffice conversion failed')
     }
   }
 
