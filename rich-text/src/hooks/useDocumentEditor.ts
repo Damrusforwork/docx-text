@@ -14,6 +14,7 @@ import { StarterKit } from '@tiptap/starter-kit'
 import { migrateDocumentData } from '../documentSchema'
 import { FontSize } from '../extensions/fontSize'
 import { ImageExtension } from '../extensions/imageExtension'
+import { LineHeight } from '../extensions/lineHeight'
 import { PaginationState } from '../extensions/paginationState'
 import { templates } from '../templates'
 
@@ -33,6 +34,7 @@ export function useDocumentEditor(initialDocument?: unknown) {
       TextStyle,
       FontFamily,
       FontSize,
+      LineHeight,
       Color,
       PaginationState,
     ],

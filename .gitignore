@@ -16,3 +16,4 @@ rich-text/.playwright-mcp/
 *HTML/
 *PLAN/
 *.md
+!PROJECT_ROADMAP_AND_STATUS.md

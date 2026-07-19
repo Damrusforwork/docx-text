@@ -39,6 +39,8 @@ const FONT_OPTIONS = [
   { label: 'Courier New', value: 'Courier New, monospace', displayFont: 'Courier New' },
 ]
 
+const LINE_HEIGHT_OPTIONS = [1, 1.15, 1.5, 2]
+
 function matchFontFamily(raw: string): string {
   if (!raw) return ''
   const lower = raw.toLowerCase()
@@ -222,6 +224,8 @@ export default function Toolbar({ editor }: ToolbarProps) {
   const rawFontFamily = readCurrentFontFamily(editor)
   const currentFontFamily = matchFontFamily(rawFontFamily)
   const currentFontSize = readCurrentFontSize(editor)
+  const activeTextBlock = editor.isActive('heading') ? 'heading' : 'paragraph'
+  const currentLineHeight = String(editor.getAttributes(activeTextBlock).lineHeight || 1.5)
   const selectedColor = editor.getAttributes('textStyle').color
   const currentTextColor = /^#[0-9a-f]{6}$/i.test(selectedColor) ? selectedColor : '#000000'
   const imageSelected = editor.isActive('image')
@@ -289,6 +293,40 @@ export default function Toolbar({ editor }: ToolbarProps) {
             {[6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 54, 60, 72, 84, 96].map((size) => (
               <option key={size} value={size}>
                 {size}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="line-height-dropdown">
+          <input
+            key={currentLineHeight}
+            type="text"
+            defaultValue={currentLineHeight}
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="Spacing"
+            onBlur={(event) => {
+              const applied = editor.commands.setLineHeight(event.currentTarget.value)
+              if (!applied) event.currentTarget.value = currentLineHeight
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur()
+            }}
+            title={`ระยะห่างระหว่างบรรทัด: ${currentLineHeight}`}
+            aria-label="กรอกระยะห่างระหว่างบรรทัด"
+          />
+          <select
+            value=""
+            onChange={(event) => {
+              editor.chain().focus().setLineHeight(event.currentTarget.value).run()
+            }}
+            title="เลือกค่าระยะห่างระหว่างบรรทัด"
+            aria-label="เลือกค่าระยะห่างระหว่างบรรทัด"
+          >
+            <option value="" disabled>Spacing</option>
+            {LINE_HEIGHT_OPTIONS.map((lineHeight) => (
+              <option key={lineHeight} value={String(lineHeight)}>
+                {lineHeight}
               </option>
             ))}
           </select>

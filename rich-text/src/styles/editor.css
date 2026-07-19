@@ -91,7 +91,9 @@
 }
 
 /* === Font Size Dropdown === */
-.font-size-dropdown select {
+.font-size-dropdown select,
+.line-height-dropdown input,
+.line-height-dropdown select {
   padding: 4px 20px 4px 6px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -108,12 +110,36 @@
   -webkit-appearance: auto;
 }
 
-.font-size-dropdown select:hover {
+.font-size-dropdown select:hover,
+.line-height-dropdown input:hover,
+.line-height-dropdown select:hover {
   border-color: #999;
 }
 
-.font-size-dropdown select:focus {
+.font-size-dropdown select:focus,
+.line-height-dropdown input:focus,
+.line-height-dropdown select:focus {
   border-color: #1a73e8;
+}
+
+.line-height-dropdown {
+  display: flex;
+  align-items: center;
+}
+
+.line-height-dropdown input {
+  width: 70px;
+  padding-right: 6px;
+  border-radius: 4px 0 0 4px;
+  cursor: text;
+}
+
+.line-height-dropdown select {
+  width: 58px;
+  min-width: 58px;
+  margin-left: -1px;
+  padding: 4px;
+  border-radius: 0 4px 4px 0;
 }
 
 /* === Page Margin Ruler === */
