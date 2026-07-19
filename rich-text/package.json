@@ -12,6 +12,8 @@
     "verify:line-measurement": "node --experimental-strip-types scripts/verify-line-measurement.mjs",
     "verify:line-spacing": "node --experimental-strip-types scripts/verify-line-spacing.mjs",
     "verify:pagination-state": "node --experimental-strip-types scripts/verify-pagination-state.mjs",
+    "verify:layout-contract": "node --experimental-strip-types scripts/verify-layout-contract.mjs",
+    "verify:export-materialization": "node --experimental-strip-types scripts/verify-export-materialization.mjs",
     "verify:document-schema": "node --experimental-strip-types scripts/verify-document-schema.mjs",
     "verify:import-validation": "node --experimental-strip-types scripts/verify-import-validation.mjs",
     "verify:golden-export": "node --experimental-strip-types scripts/verify-export-parity.mjs"

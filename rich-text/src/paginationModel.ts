@@ -1,4 +1,5 @@
 import { LINE_BREAK_RULES, type BlockLineMeasurement, type LineFragment } from './lineMeasurement.ts'
+import type { CanonicalPageBreak } from './layoutContract.ts'
 
 export interface PageFragment {
   nodeId: string
@@ -20,6 +21,11 @@ export interface PageBreakDecoration {
   pageNumber: number
   from: number
   heightPx: number
+}
+
+export interface PageBreakInput {
+  pageNumber: number
+  position: CanonicalPageBreak['position']
 }
 
 function createPage(pages: PageLayout[]): PageLayout {
@@ -164,6 +170,31 @@ export function buildPageBreakDecorations(
     const previousPage = pages[index]
     return [{
       pageNumber: page.pageNumber,
+      from: firstFragment.from,
+      heightPx: Math.max(0, usableHeightPx - previousPage.usedHeightPx)
+        + marginBottomPx
+        + pageGapPx
+        + marginTopPx,
+    }]
+  })
+}
+
+export function buildPageBreakDecorationsFromPlan(
+  pageBreaks: PageBreakInput[],
+  pages: PageLayout[],
+  usableHeightPx: number,
+  marginTopPx: number,
+  marginBottomPx: number,
+  pageGapPx: number,
+): PageBreakDecoration[] {
+  const pageByNumber = new Map(pages.map((page) => [page.pageNumber, page]))
+  return pageBreaks.flatMap((pageBreak) => {
+    const page = pageByNumber.get(pageBreak.pageNumber)
+    const previousPage = pageByNumber.get(pageBreak.pageNumber - 1)
+    const firstFragment = page?.fragments[0]
+    if (!page || !previousPage || !firstFragment) return []
+    return [{
+      pageNumber: pageBreak.pageNumber,
       from: firstFragment.from,
       heightPx: Math.max(0, usableHeightPx - previousPage.usedHeightPx)
         + marginBottomPx

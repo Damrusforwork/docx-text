@@ -8,6 +8,10 @@ function nonNegativeInteger(value: string | undefined, fallback: number): number
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback
 }
 
+function booleanFlag(value: string | undefined): boolean {
+  return value?.toLowerCase() === 'true'
+}
+
 const env = import.meta.env ?? {}
 
 export const APP_CONFIG = {
@@ -16,6 +20,7 @@ export const APP_CONFIG = {
     || 'https://unpkg.com/pdfjs-dist@4.9.155/build/pdf.worker.min.mjs',
   exportTimeoutMs: positiveInteger(env.VITE_EXPORT_TIMEOUT_MS, 150_000),
   exportRetryCount: Math.min(nonNegativeInteger(env.VITE_EXPORT_RETRY_COUNT, 1), 3),
+  legacyLayoutExport: booleanFlag(env.VITE_LEGACY_LAYOUT_EXPORT),
   maxImportFileBytes: positiveInteger(env.VITE_MAX_IMPORT_FILE_MB, 25) * 1024 * 1024,
   maxPdfPages: positiveInteger(env.VITE_MAX_PDF_PAGES, 100),
 } as const

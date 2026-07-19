@@ -1,4 +1,5 @@
 import { APP_CONFIG } from '../config'
+import type { DocumentData } from '../documentSchema'
 import type { RenderManifest } from '../rendering/documentRenderer'
 
 export type ApiErrorCode =
@@ -8,6 +9,8 @@ export type ApiErrorCode =
   | 'INVALID_DOCUMENT'
   | 'CONVERSION_TIMEOUT'
   | 'CONVERSION_FAILED'
+  | 'LAYOUT_PLAN_INVALID'
+  | 'LAYOUT_STALE'
   | 'REQUEST_CANCELLED'
   | 'NETWORK_ERROR'
   | 'INTERNAL_ERROR'
@@ -72,7 +75,13 @@ async function parseApiError(response: Response): Promise<ApiError> {
 
 export async function requestExport(
   format: 'pdf' | 'docx',
-  body: { html: string; filename: string; renderManifest?: RenderManifest },
+  body: {
+    html: string
+    filename: string
+    document?: DocumentData
+    renderManifest?: RenderManifest
+    legacyLayout?: boolean
+  },
   signal?: AbortSignal,
 ): Promise<Blob> {
   for (let attempt = 0; attempt <= APP_CONFIG.exportRetryCount; attempt += 1) {

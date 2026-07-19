@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {
   DOCUMENT_SCHEMA_VERSION,
   createDocumentData,
+  createDocumentRevision,
   migrateDocumentData,
 } from '../src/documentSchema.ts'
 
@@ -10,18 +11,25 @@ const content = {
   content: [{ type: 'paragraph', content: [{ type: 'text', text: 'ทดสอบ' }] }],
 }
 
-assert.deepEqual(createDocumentData(content), {
+const expected = {
   schemaVersion: DOCUMENT_SCHEMA_VERSION,
+  documentRevision: createDocumentRevision(content),
   content,
+}
+
+assert.deepEqual(createDocumentData(content), {
+  ...expected,
 })
 assert.deepEqual(migrateDocumentData(content), {
-  schemaVersion: DOCUMENT_SCHEMA_VERSION,
-  content,
+  ...expected,
 })
 assert.deepEqual(migrateDocumentData({ schemaVersion: 1, content }), {
-  schemaVersion: DOCUMENT_SCHEMA_VERSION,
-  content,
+  ...expected,
 })
+assert.notEqual(createDocumentRevision(content), createDocumentRevision({
+  ...content,
+  content: [...content.content, { type: 'paragraph' }],
+}))
 assert.throws(
   () => migrateDocumentData({ schemaVersion: DOCUMENT_SCHEMA_VERSION + 1, content }),
   /Unsupported document schema version/,

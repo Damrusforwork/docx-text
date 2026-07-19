@@ -1,4 +1,4 @@
-import { APP_CONFIG } from '../config'
+import { APP_CONFIG } from '../config.ts'
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const MAX_ZIP_ENTRIES = 2_000

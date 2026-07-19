@@ -2,10 +2,11 @@ import type { Editor } from '@tiptap/react'
 import { useEffect, useRef, useState } from 'react'
 import type { PageMargins } from '../components/PageMarginRuler'
 import { setPageBreaks } from '../extensions/paginationState'
+import { buildCanonicalPagePlan, type CanonicalPagePlan } from '../layoutContract'
 import { measureDocumentLines } from '../lineMeasurement'
 import { DOCUMENT_PAGE_SPEC } from '../pageSpec'
 import {
-  buildPageBreakDecorations,
+  buildPageBreakDecorationsFromPlan,
   buildPageLayouts,
   pageLayoutSignature,
   type PageBreakDecoration,
@@ -15,6 +16,7 @@ export function usePagination(editor: Editor | null, margins: PageMargins) {
   const [pageCount, setPageCount] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageBreaks, setLayoutPageBreaks] = useState<PageBreakDecoration[]>([])
+  const [pagePlan, setPagePlan] = useState<CanonicalPagePlan | null>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   const pageCountRef = useRef(1)
   const paginationSignatureRef = useRef('')
@@ -49,7 +51,13 @@ export function usePagination(editor: Editor | null, margins: PageMargins) {
 
       const usableHeight = pageHeight - marginTop - marginBottom
       const pageLayouts = buildPageLayouts(lineMeasurements, usableHeight)
-      const pageBreaks = buildPageBreakDecorations(
+      const nextPagePlan = buildCanonicalPagePlan({
+        document: editor.getJSON(),
+        margins,
+        pages: pageLayouts,
+      })
+      const pageBreaks = buildPageBreakDecorationsFromPlan(
+        nextPagePlan.breaks,
         pageLayouts,
         usableHeight,
         marginTop,
@@ -64,6 +72,7 @@ export function usePagination(editor: Editor | null, margins: PageMargins) {
       const signature = `${pageLayoutSignature(pageLayouts)}:${JSON.stringify(pageBreaks)}`
       if (signature !== paginationSignatureRef.current) {
         paginationSignatureRef.current = signature
+        setPagePlan(nextPagePlan)
         setLayoutPageBreaks(pageBreaks)
         setPageBreaks(editor, pageBreaks)
       }
@@ -111,5 +120,5 @@ export function usePagination(editor: Editor | null, margins: PageMargins) {
     }
   }, [editor, margins])
 
-  return { pageRef, pageCount, currentPage, pageBreaks }
+  return { pageRef, pageCount, currentPage, pageBreaks, pagePlan }
 }

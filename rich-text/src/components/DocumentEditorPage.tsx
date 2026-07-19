@@ -36,13 +36,14 @@ export default function DocumentEditorPage() {
     handleImportFile,
     handleExitPdfMode,
   } = useDocumentImport(editor, handleDocxImported)
-  const { pageRef, pageCount, currentPage, pageBreaks } = usePagination(editor, margins)
+  const { pageRef, pageCount, currentPage, pageBreaks, pagePlan } = usePagination(editor, margins)
   const { exporting, handleExport, cancelExport } = useDocumentExport(
     editor,
     activeTemplate,
     margins,
     pageCount,
     pageBreaks,
+    pagePlan,
   )
 
   const switchTemplate = useCallback((key: string) => {

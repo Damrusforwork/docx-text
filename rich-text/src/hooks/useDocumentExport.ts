@@ -1,6 +1,8 @@
 import type { Editor } from '@tiptap/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PageMargins } from '../components/PageMarginRuler'
+import { APP_CONFIG } from '../config'
+import type { CanonicalPagePlan } from '../layoutContract'
 import type { PageBreakDecoration } from '../paginationModel'
 import { renderDocumentForExport } from '../rendering/documentRenderer'
 import { ApiError, type ApiErrorCode } from '../utils/apiClient'
@@ -9,7 +11,7 @@ import { exportToPdf } from '../utils/exportPdf'
 
 type ExportFormat = 'PDF' | 'DOCX'
 
-const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
+const ERROR_MESSAGES: Partial<Record<ApiErrorCode, string>> = {
   INVALID_REQUEST: 'ข้อมูลเอกสารไม่ถูกต้อง',
   UNSUPPORTED_MEDIA_TYPE: 'รูปแบบข้อมูลไม่รองรับ',
   PAYLOAD_TOO_LARGE: 'เอกสารมีขนาดใหญ่เกินกำหนด',
@@ -27,6 +29,7 @@ export function useDocumentExport(
   margins: PageMargins,
   pageCount: number,
   pageBreaks: PageBreakDecoration[],
+  pagePlan?: CanonicalPagePlan | null,
 ) {
   const [exporting, setExporting] = useState<ExportFormat | null>(null)
   const exportControllerRef = useRef<AbortController | null>(null)
@@ -45,34 +48,41 @@ export function useDocumentExport(
         target: format === 'PDF' ? 'pdf' : 'docx',
         pageCount,
         pageBreaks,
+        pagePlan: APP_CONFIG.legacyLayoutExport ? null : pagePlan,
       })
+      const document = APP_CONFIG.legacyLayoutExport ? undefined : rendered.document
+      const renderManifest = APP_CONFIG.legacyLayoutExport ? undefined : rendered.manifest
       const filename = `${activeTemplate}.${format.toLowerCase()}`
       if (format === 'PDF') {
         await exportToPdf({
           html: rendered.html,
           filename,
-          renderManifest: rendered.manifest,
+          document,
+          renderManifest,
+          legacyLayout: APP_CONFIG.legacyLayoutExport,
           signal: controller.signal,
         })
       } else {
         await exportToDocx({
           html: rendered.html,
           filename,
-          renderManifest: rendered.manifest,
+          document,
+          renderManifest,
+          legacyLayout: APP_CONFIG.legacyLayoutExport,
           signal: controller.signal,
         })
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === 'REQUEST_CANCELLED') return
       const message = error instanceof ApiError
-        ? ERROR_MESSAGES[error.code]
+        ? ERROR_MESSAGES[error.code] ?? error.message
         : 'เกิดข้อผิดพลาดที่ไม่คาดคิด'
       window.alert(`ไม่สามารถ Export ${format} ได้\n${message}`)
     } finally {
       if (exportControllerRef.current === controller) exportControllerRef.current = null
       setExporting(null)
     }
-  }, [editor, exporting, activeTemplate, margins, pageCount, pageBreaks])
+  }, [editor, exporting, activeTemplate, margins, pageCount, pageBreaks, pagePlan])
 
   const cancelExport = useCallback(() => exportControllerRef.current?.abort(), [])
 

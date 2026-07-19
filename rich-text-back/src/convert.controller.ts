@@ -16,10 +16,13 @@ import {
   ConvertService,
   InvalidDocumentError,
 } from './convert.service'
+import { LayoutPlanValidationError, validateLayoutManifest } from './layoutManifest'
 
 class ConvertDocumentDto {
   html: string
   filename?: string
+  document?: unknown
+  legacyLayout?: boolean
   renderManifest?: unknown
 }
 
@@ -51,6 +54,14 @@ export class ConvertController {
         'Document exceeds the allowed size.',
         HttpStatus.PAYLOAD_TOO_LARGE,
       )
+    }
+    try {
+      validateLayoutManifest(body)
+    } catch (error) {
+      if (error instanceof LayoutPlanValidationError) {
+        throw apiError(error.code, error.message, error.status)
+      }
+      throw error
     }
   }
 

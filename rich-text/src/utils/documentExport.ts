@@ -1,10 +1,12 @@
 import { DOCUMENT_PAGE_SPEC, type DocumentMargins } from '../pageSpec.ts'
+import type { CanonicalPagePlan } from '../layoutContract.ts'
 
 export type { DocumentMargins } from '../pageSpec.ts'
 
 interface BuildExportHtmlOptions {
   html: string
   margins: DocumentMargins
+  pagePlan?: CanonicalPagePlan | null
 }
 
 function protectEmbeddedImages(html: string): {
@@ -78,16 +80,42 @@ function inlinePageBreakStyles(html: string): string {
   )
 }
 
+function materializeBeforeBlockPageBreaks(html: string, pagePlan?: CanonicalPagePlan | null): string {
+  if (!pagePlan?.breaks.length) return html
+  const beforeBlockIds = new Set(
+    pagePlan.breaks
+      .filter((pageBreak) => pageBreak.position.kind === 'before-block')
+      .map((pageBreak) => pageBreak.position.nodeId),
+  )
+  if (!beforeBlockIds.size) return html
+
+  return html.replace(/<([a-z][\w-]*)([^>]*\sdata-layout-id=(["'])([^"']+)\3[^>]*)>/gi, (
+    tag,
+    name: string,
+    attributes: string,
+    _quote: string,
+    layoutId: string,
+  ) => {
+    if (!beforeBlockIds.has(layoutId) || /\sdata-page-break-before=/i.test(attributes)) {
+      return tag
+    }
+    return `<${name}${attributes} data-page-break-before="true">`
+  })
+}
+
 export function buildExportHtml({
   html,
   margins,
+  pagePlan,
 }: BuildExportHtmlOptions): string {
   const { widthCm, heightCm, typography } = DOCUMENT_PAGE_SPEC
   const embeddedImages = protectEmbeddedImages(html)
   const content = embeddedImages.restore(
     normalizeParagraphsForLibreOffice(
       inlinePageBreakStyles(
-        normalizeWhitespace(normalizeCssLengthsForLibreOffice(embeddedImages.html)),
+        normalizeWhitespace(normalizeCssLengthsForLibreOffice(
+          materializeBeforeBlockPageBreaks(embeddedImages.html, pagePlan),
+        )),
       ),
     ),
   )

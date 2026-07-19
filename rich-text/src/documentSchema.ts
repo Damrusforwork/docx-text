@@ -1,9 +1,13 @@
 import type { JSONContent } from '@tiptap/core'
+import { createDocumentRevision } from './layoutContract.ts'
+
+export { createDocumentRevision } from './layoutContract.ts'
 
 export const DOCUMENT_SCHEMA_VERSION = 1
 
 export interface DocumentData {
   schemaVersion: number
+  documentRevision: string
   content: JSONContent
 }
 
@@ -14,7 +18,11 @@ function isJsonContent(value: unknown): value is JSONContent {
 }
 
 export function createDocumentData(content: JSONContent): DocumentData {
-  return { schemaVersion: DOCUMENT_SCHEMA_VERSION, content }
+  return {
+    schemaVersion: DOCUMENT_SCHEMA_VERSION,
+    documentRevision: createDocumentRevision(content),
+    content,
+  }
 }
 
 export function migrateDocumentData(value: unknown): DocumentData {

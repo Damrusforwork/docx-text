@@ -5,11 +5,13 @@ This repository contains a browser-based rich-text document editor focused on Th
 # Current Status
 
 - Status date: 2026-07-19
+- Active branch for the permanent page-layout plan: `resolve_engin`.
 - Frontend: implemented in `rich-text/` and builds successfully.
 - Backend: implemented in `rich-text-back/` and builds successfully.
 - The editor supports unrestricted positive per-paragraph and per-heading line spacing, with recommended values of 1.0, 1.15, 1.5, and 2.0.
-- Latest verification: frontend TypeScript typecheck, build and lint, backend build, document schema verification, and line-spacing export verification passed.
+- Latest verification: frontend build and lint, backend build, backend layout-manifest verification, document schema verification, layout contract verification, export-materialization verification, pagination-state verification, line-measurement verification, line-spacing verification, import-validation verification, and diff whitespace checks passed.
 - The frontend production build reports a non-blocking warning because its main JavaScript bundle is larger than 500 kB.
+- A phased sub-agent implementation plan exists for the proposed permanent page-layout architecture; Phase 1 canonical contract work and the first Phase 2 before-block export validation slice are implemented on `resolve_engin`.
 
 # Architecture
 
@@ -54,6 +56,8 @@ This repository contains a browser-based rich-text document editor focused on Th
 - PDF import into an annotation mode with movable/resizable text and image overlays.
 - PDF and DOCX export with progress, cancellation, retry-aware API handling, and localized error messages.
 - Versioned document JSON schema and migration from legacy raw ProseMirror JSON.
+- Versioned canonical page plan with document revision, layout fingerprint, page count, and logical break positions.
+- Export requests now include the versioned document snapshot and render manifest page plan for backend validation.
 
 ## Backend Conversion
 
@@ -66,11 +70,14 @@ This repository contains a browser-based rich-text document editor focused on Th
 
 # In Progress
 
-- None recorded after the 2026-07-19 line-spacing toolbar change.
+- Implementing the permanent page-layout migration for branch `resolve_engin` using `plan/page-layout/19072026-permanent-page-layout-implementation-plan.md`.
+- Phase 1 canonical contract and stable page-plan wiring are implemented.
+- Phase 2 before-block export materialization and backend layout-plan validation are mostly implemented, with focused frontend materialization, backend manifest validation, and explicit legacy rollback gates; mid-paragraph materialization remains planned.
+- Phase 0 baseline evidence is recorded in `MD/summaryAgent/resolve_engin/19072026-phase-0-baseline-report.md`.
 
 # Roadmap / Planned Features
 
-- No committed planned features are currently represented in the source repository.
+- Continue the page-layout plan with mid-paragraph break materialization, renderer PoC, production Preview/PDF, DOCX compatibility, and staged rollout.
 - Consider lazy-loading PDF and document-processing modules if production bundle size becomes a delivery concern.
 - Consider adding automated browser interaction coverage for toolbar commands and visual pagination.
 - Proposed, not implemented: introduce a versioned Document Layout Core with stable node identities, canonical page plans, layout fingerprints, and target-specific page-break materializers.
@@ -84,7 +91,9 @@ This repository contains a browser-based rich-text document editor focused on Th
 - Embedded editor images use Base64 data URLs, increasing editor state and request size for image-heavy documents.
 - The frontend production bundle exceeds Vite's default 500 kB chunk warning threshold.
 - Verification scripts cover document logic and export behavior, but there is no automated end-to-end browser suite in the repository.
-- `npm run verify:import-validation` currently fails under Node ESM because `importValidation.ts` imports `../config` without a file extension; the Vite application build itself succeeds.
+- The canonical page plan currently materializes before-block breaks only; text-offset/mid-paragraph export splitting remains unimplemented.
+- Backend validates `renderManifest.pagePlan` metadata, manifest size, break count, document revision, break order, duplicate positions, and referenced layout IDs before conversion, but does not yet use the plan for rendering beyond validating the frontend-materialized HTML.
+- `npm run verify:export-parity` currently reaches PDF inspection but fails on the `thai-text` fixture because expected Thai text tokens are missing or out of order in the generated PDF output.
 
 # Important Decisions
 
@@ -98,6 +107,8 @@ This repository contains a browser-based rich-text document editor focused on Th
 - Use LibreOffice for server-side PDF and DOCX generation to preserve a single HTML-based conversion path.
 - Do not build a complete custom text, PDF, or DOCX rendering engine. The proposed permanent architecture owns the document layout contract, page plan, break policies, and export adapters while delegating text shaping and final rendering to established engines.
 - Treat visual parity and editable-document parity as separate contracts: the proposed print preview/PDF path targets visual parity in a pinned environment, while editable DOCX targets content and logical page-break parity only within declared supported viewers.
+- For parallel agent work in the shared workspace, use exclusive file ownership and let the root agent integrate and rerun phase gates.
+- Do not commit or push unless the user explicitly requests that exact action.
 
 # Change History
 
@@ -119,3 +130,9 @@ This repository contains a browser-based rich-text document editor focused on Th
 - Updated the Thai page-layout documentation to describe the implemented browser pagination pipeline, the current export-parity gap, and a phased single-source-of-truth design for PDF/DOCX page breaks.
 - Rewrote the current-project structure analysis in Thai to match the latest frontend and backend source code, including editor orchestration, line spacing, image handling, versioned document data, import validation, rendering, conversion limits, environment configuration, current page-break parity limitations, removed features, and integration documentation. The analysis is intentionally exempt from the usual 200-line documentation guideline so it can serve as a detailed technical reference.
 - Added a detailed Thai permanent page-layout solution proposing a Document Layout Core, canonical page plans, deterministic layout fingerprints, an authoritative paged preview/PDF pipeline, an editable DOCX strategy, phased migration, golden tests, security controls, rollout, and rollback. Linked the proposal from the existing page-layout analysis; all proposed architecture work remains explicitly unimplemented in the roadmap.
+- Added `plan/page-layout/19072026-permanent-page-layout-implementation-plan.md` for branch `resolve_engin`, defining phase dependencies, bounded sub-agent work packages, exclusive file ownership, acceptance gates, rollout, and rollback.
+- Implemented the first permanent page-layout slice on `resolve_engin`: canonical layout contract, document revision, page-plan state wiring, before-block export materialization, render manifest page-plan transport, backend layout-plan validation, and layout-contract verification.
+- Locked the Phase 0 baseline report for `resolve_engin` and fixed the Node ESM import path used by `verify:import-validation`.
+- Added `verify:export-materialization` to prove canonical before-block breaks are materialized into export HTML without prematurely handling text-offset breaks.
+- Added backend `verify:layout-manifest` and extracted layout manifest validation into a pure module with manifest size and break-count caps.
+- Added `VITE_LEGACY_LAYOUT_EXPORT=true` as an explicit rollback path that skips canonical layout materialization and backend layout-manifest validation for legacy export requests.

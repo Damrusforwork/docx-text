@@ -1,10 +1,11 @@
 import type { CSSProperties } from 'react'
 import type { Editor } from '@tiptap/react'
-import { createDocumentData, type DocumentData } from '../documentSchema'
-import { DOCUMENT_PAGE_SPEC, type DocumentMargins } from '../pageSpec'
-import type { PageBreakDecoration } from '../paginationModel'
-import { buildExportHtml } from '../utils/documentExport'
-import { LAYOUT_TOLERANCE } from './layoutTolerance'
+import { createDocumentData, type DocumentData } from '../documentSchema.ts'
+import type { CanonicalPagePlan } from '../layoutContract.ts'
+import { DOCUMENT_PAGE_SPEC, type DocumentMargins } from '../pageSpec.ts'
+import type { PageBreakDecoration } from '../paginationModel.ts'
+import { buildExportHtml } from '../utils/documentExport.ts'
+import { LAYOUT_TOLERANCE } from './layoutTolerance.ts'
 
 export type RenderTarget = 'preview' | 'pdf' | 'docx'
 
@@ -22,6 +23,7 @@ export interface RenderManifest {
   schemaVersion: number
   pageCount: number
   pageBreaks: PageBreakDecoration[]
+  pagePlan?: CanonicalPagePlan
   images: ImageRenderLayout[]
   toleranceVersion: number
 }
@@ -38,6 +40,7 @@ interface RenderDocumentOptions {
   target: Exclude<RenderTarget, 'preview'>
   pageCount: number
   pageBreaks: PageBreakDecoration[]
+  pagePlan?: CanonicalPagePlan | null
 }
 
 export function buildPreviewPageStyle(
@@ -61,8 +64,9 @@ export function renderHtmlForExport(
   html: string,
   margins: DocumentMargins,
   _target: Exclude<RenderTarget, 'preview'>,
+  pagePlan?: CanonicalPagePlan | null,
 ) {
-  return buildExportHtml({ html, margins })
+  return buildExportHtml({ html, margins, pagePlan })
 }
 
 export function renderDocumentForExport({
@@ -71,6 +75,7 @@ export function renderDocumentForExport({
   target,
   pageCount,
   pageBreaks,
+  pagePlan,
 }: RenderDocumentOptions): DocumentRenderResult {
   const root = document.createElement('div')
   root.innerHTML = editor.getHTML()
@@ -113,13 +118,14 @@ export function renderDocumentForExport({
   const documentData = createDocumentData(editor.getJSON())
   return {
     document: documentData,
-    html: renderHtmlForExport(root.innerHTML, margins, target),
+    html: renderHtmlForExport(root.innerHTML, margins, target, pagePlan),
     manifest: {
       renderVersion: 1,
       target,
       schemaVersion: documentData.schemaVersion,
       pageCount,
       pageBreaks: structuredClone(pageBreaks),
+      pagePlan: pagePlan ? structuredClone(pagePlan) : undefined,
       images,
       toleranceVersion: LAYOUT_TOLERANCE.version,
     },
