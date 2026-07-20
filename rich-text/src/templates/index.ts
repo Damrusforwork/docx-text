@@ -12,8 +12,8 @@ export const templates: Record<string, Template> = {
     description: 'หนังสือติดต่อภายในองค์กร',
     html: `
 <img src="${blaze01}" alt="ตราสัญลักษณ์" width="80" data-text-align="center">
-<h1 style="text-align: center;">หนังสือภายใน</h1>
-<h2 style="text-align: center;">Internal Memorandum</h2>
+<p style="text-align: center; line-height: 1;"><strong><span style="font-size: 24pt;">หนังสือภายใน</span></strong></p>
+<p style="text-align: center; line-height: 1;"><strong><span style="font-size: 20pt;">Internal Memorandum</span></strong></p>
 
 <p style="text-align: right;">ส่วนราชการ: สำนักงานปลัดกระทรวง</p>
 <p style="text-align: right;">ที่: กธ 001/2567</p>

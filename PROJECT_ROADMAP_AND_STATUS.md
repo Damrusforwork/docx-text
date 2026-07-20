@@ -107,6 +107,7 @@ This repository contains a browser-based rich-text document editor focused on Th
 - Added validated percentage-based left margins for paragraphs and preserved horizontal paragraph margins in PDF/DOCX export HTML.
 - Updated the internal memorandum signature block to center its lines within the right half of the document, matching Thai official-document layout.
 - Added a signature-layout export verification script.
+- Reduced the internal memorandum title spacing with template-local paragraph line height and the existing title font sizes, without changing global heading styles.
 
 ## 2026-07-19
 
