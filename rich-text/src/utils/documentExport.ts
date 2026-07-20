@@ -102,7 +102,7 @@ export function buildExportHtml({
     body { font-family: ${typography.fontFamily}; font-size: ${typography.fontSizePt}pt; line-height: ${typography.lineHeightPt}pt; color: #000; }
     .document-export { position: relative; white-space: pre-wrap; }
     [data-page-break-before="true"] { break-before: page; page-break-before: always; }
-    p, .doc-paragraph { min-height: ${typography.lineHeightPt}pt; margin: 0 !important; padding: 0; font: inherit; line-height: ${typography.lineHeightPt}pt; }
+    p, .doc-paragraph { min-height: ${typography.lineHeightPt}pt; margin-top: 0 !important; margin-bottom: 0 !important; padding: 0; font: inherit; line-height: ${typography.lineHeightPt}pt; }
     .doc-empty { height: ${typography.lineHeightPt}pt; min-height: ${typography.lineHeightPt}pt; overflow: hidden; }
     h1 { margin: 0 0 8pt; font-size: 24pt; line-height: 36pt; }
     h2 { margin: 0 0 8pt; font-size: 20pt; line-height: 30pt; }

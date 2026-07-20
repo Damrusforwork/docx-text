@@ -4,11 +4,11 @@ This repository contains a browser-based rich-text document editor focused on Th
 
 # Current Status
 
-- Status date: 2026-07-19
+- Status date: 2026-07-20
 - Frontend: implemented in `rich-text/` and builds successfully.
 - Backend: implemented in `rich-text-back/` and builds successfully.
 - The editor supports unrestricted positive per-paragraph and per-heading line spacing, with recommended values of 1.0, 1.15, 1.5, and 2.0.
-- Latest verification: frontend TypeScript typecheck, build and lint, backend build, document schema verification, and line-spacing export verification passed.
+- Latest verification: frontend TypeScript typecheck, build and lint, backend build, document schema verification, line-spacing export verification, and signature-layout export verification passed.
 - The frontend production build reports a non-blocking warning because its main JavaScript bundle is larger than 500 kB.
 
 # Architecture
@@ -18,7 +18,7 @@ This repository contains a browser-based rich-text document editor focused on Th
 - React 19 and TypeScript application built with Vite.
 - Tiptap 3 provides the ProseMirror-based rich-text editor and editor commands.
 - `DocumentEditorPage` coordinates templates, imports, exports, margins, pagination, and the editor UI.
-- Custom Tiptap extensions provide font size, line height, image configuration, and pagination state.
+- Custom Tiptap extensions provide font size, line height, paragraph margin, image configuration, and pagination state.
 - `DOCUMENT_PAGE_SPEC` is the canonical A4 page, margin, gap, and default typography configuration.
 - Pagination measures rendered editor lines and stores calculated page-break decorations.
 - The renderer produces versioned document JSON, normalized export HTML, and a render manifest used by the export API.
@@ -46,6 +46,7 @@ This repository contains a browser-based rich-text document editor focused on Th
 - Paragraph and heading levels 1-3.
 - Bold, italic, underline, strikethrough, highlight, and text color.
 - Left, center, right, and justified text alignment.
+- Percentage-based left paragraph margins for stable right-half signature blocks across editing and export.
 - Bullet lists, ordered lists, horizontal rules, and editable tables.
 - PNG/JPEG image import as embedded data URLs.
 - Image alignment and corner resizing with preserved aspect ratio.
@@ -100,6 +101,12 @@ This repository contains a browser-based rich-text document editor focused on Th
 - Treat visual parity and editable-document parity as separate contracts: the proposed print preview/PDF path targets visual parity in a pinned environment, while editable DOCX targets content and logical page-break parity only within declared supported viewers.
 
 # Change History
+
+## 2026-07-20
+
+- Added validated percentage-based left margins for paragraphs and preserved horizontal paragraph margins in PDF/DOCX export HTML.
+- Updated the internal memorandum signature block to center its lines within the right half of the document, matching Thai official-document layout.
+- Added a signature-layout export verification script.
 
 ## 2026-07-19
 
