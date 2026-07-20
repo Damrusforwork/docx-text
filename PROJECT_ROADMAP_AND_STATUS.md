@@ -108,6 +108,7 @@ This repository contains a browser-based rich-text document editor focused on Th
 - Updated the internal memorandum signature block to center its lines within the right half of the document, matching Thai official-document layout.
 - Added a signature-layout export verification script.
 - Reduced the internal memorandum title spacing with template-local paragraph line height and the existing title font sizes, without changing global heading styles.
+- Made every text-alignment toolbar action clear the template-only paragraph margin first, so left, center, right, and justified alignment use the full document width after user interaction.
 
 ## 2026-07-19
 

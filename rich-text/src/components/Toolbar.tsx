@@ -229,11 +229,12 @@ export default function Toolbar({ editor }: ToolbarProps) {
   const selectedColor = editor.getAttributes('textStyle').color
   const currentTextColor = /^#[0-9a-f]{6}$/i.test(selectedColor) ? selectedColor : '#000000'
   const imageSelected = editor.isActive('image')
-  const setAlignment = (textAlign: 'left' | 'center' | 'right') => {
+  const setAlignment = (textAlign: 'left' | 'center' | 'right' | 'justify') => {
     const chain = editor.chain().focus()
     if (imageSelected) {
-      chain.updateAttributes('image', { textAlign }).run()
+      if (textAlign !== 'justify') chain.updateAttributes('image', { textAlign }).run()
     } else {
+      if (editor.isActive('paragraph')) chain.updateAttributes('paragraph', { marginLeft: null })
       chain.setTextAlign(textAlign).run()
     }
   }
@@ -440,7 +441,7 @@ export default function Toolbar({ editor }: ToolbarProps) {
           <AlignRight size={16} />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+          onClick={() => setAlignment('justify')}
           isActive={editor.isActive({ textAlign: 'justify' })}
           disabled={imageSelected}
           title="จัดเต็มแถว"
