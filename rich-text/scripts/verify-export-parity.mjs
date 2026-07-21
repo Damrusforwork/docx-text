@@ -2,8 +2,8 @@ import { PDFDocument } from 'pdf-lib'
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { DOCUMENT_PAGE_SPEC } from '../src/pageSpec.ts'
-import { renderHtmlForExport } from '../src/rendering/documentRenderer.ts'
 import { LAYOUT_TOLERANCE } from '../src/rendering/layoutTolerance.ts'
+import { buildExportHtml } from '../src/utils/documentExport.ts'
 import { GOLDEN_EXPORT_FIXTURES } from './fixtures/export-golden-fixtures.mjs'
 
 try {
@@ -15,11 +15,10 @@ try {
 const API_URL = process.env.VERIFY_EXPORT_API_URL || 'http://127.0.0.1:3001/api/convert/pdf'
 
 async function exportFixture(fixture) {
-  const html = renderHtmlForExport(
-    fixture.html.replace(/>\s+</g, '><'),
-    DOCUMENT_PAGE_SPEC.defaultMargins,
-    'pdf',
-  )
+  const html = buildExportHtml({
+    html: fixture.html.replace(/>\s+</g, '><'),
+    margins: DOCUMENT_PAGE_SPEC.defaultMargins,
+  })
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -107,9 +106,15 @@ function assertTextOrder(text, expected, fixtureId) {
 
 const report = []
 await mkdir('../output/pdf/golden', { recursive: true })
+const requestedFixture = process.argv[2]
+const fixtures = requestedFixture
+  ? GOLDEN_EXPORT_FIXTURES.filter((fixture) => fixture.id === requestedFixture)
+  : GOLDEN_EXPORT_FIXTURES
+if (requestedFixture && fixtures.length === 0) throw new Error(`Unknown fixture: ${requestedFixture}`)
 
-for (const fixture of GOLDEN_EXPORT_FIXTURES) {
+for (const fixture of fixtures) {
   const bytes = await exportFixture(fixture)
+  await writeFile(`../output/pdf/golden/${fixture.id}.pdf`, bytes)
   const pdf = await inspectPdf(bytes)
   const allText = pdf.pages.map((page) => page.text).join(' ')
   if (Math.abs(pdf.pageCount - fixture.expected.pageCount) > LAYOUT_TOLERANCE.pageCount) {
@@ -131,6 +136,21 @@ for (const fixture of GOLDEN_EXPORT_FIXTURES) {
       throw new Error(`${fixture.id}: image bounds outside tolerance`)
     }
   }
+  if (fixture.expected.minimumHorizontalGapPt) {
+    const { left, right, value } = fixture.expected.minimumHorizontalGapPt
+    const leftItem = pdf.pages.flatMap((page) => page.items).find((item) => item.str.includes(left))
+    const rightItem = pdf.pages.flatMap((page) => page.items).find((item) => item.str.includes(right))
+    const gap = leftItem && rightItem ? Math.abs(rightItem.transform[4] - leftItem.transform[4]) : 0
+    if (gap < value) {
+      throw new Error(`${fixture.id}: expected at least ${value}pt between table columns, got ${gap}pt`)
+    }
+  }
+  if (fixture.expected.minimumTextXPt) {
+    const { text, value } = fixture.expected.minimumTextXPt
+    const item = pdf.pages.flatMap((page) => page.items).find((candidate) => candidate.str.includes(text))
+    const x = item?.transform[4] ?? 0
+    if (x < value) throw new Error(`${fixture.id}: expected "${text}" at x >= ${value}pt, got ${x}pt`)
+  }
   if (fixture.expected.marker) {
     const markerPage = pdf.pages.findIndex((page) => page.text.includes(fixture.expected.marker.text)) + 1
     if (markerPage !== fixture.expected.marker.page) {
@@ -138,7 +158,6 @@ for (const fixture of GOLDEN_EXPORT_FIXTURES) {
     }
   }
 
-  await writeFile(`../output/pdf/golden/${fixture.id}.pdf`, bytes)
   report.push({ id: fixture.id, pageCount: pdf.pageCount, passed: true })
 }
 

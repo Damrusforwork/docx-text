@@ -78,16 +78,81 @@ function inlinePageBreakStyles(html: string): string {
   )
 }
 
+function normalizeTablesForLibreOffice(html: string): string {
+  const addInlineStyles = (rawAttributes: string, defaults: Array<[string, string]>) => {
+    let attributes = rawAttributes
+    const stylePattern = /\sstyle=(["'])(.*?)\1/i
+    const styleMatch = attributes.match(stylePattern)
+    let styles = styleMatch?.[2] || ''
+
+    for (const [property, value] of defaults) {
+      if (!new RegExp(`(?:^|;)\\s*${property}\\s*:`, 'i').test(styles)) {
+        styles = `${property}: ${value}; ${styles}`
+      }
+    }
+
+    return styleMatch
+      ? attributes.replace(stylePattern, ` style=${styleMatch[1]}${styles.trim()}${styleMatch[1]}`)
+      : `${attributes} style="${styles.trim()}"`
+  }
+
+  const tables = html.replace(/<table\b([^>]*)>/gi, (_, rawAttributes: string) => {
+    let attributes = addInlineStyles(rawAttributes, [
+      ['width', '100%'],
+      ['table-layout', 'fixed'],
+      ['border-collapse', 'collapse'],
+      ['page-break-inside', 'avoid'],
+    ])
+    if (!/\swidth\s*=/i.test(attributes)) attributes += ' width="100%"'
+
+    return `<table${attributes}>`
+  })
+
+  return tables.replace(/<(td|th)\b([^>]*)>/gi, (_, tag: string, rawAttributes: string) => {
+    const defaults: Array<[string, string]> = [
+      ['border', '1pt solid #000'],
+      ['padding', '8pt 12pt'],
+      ['font-size', '14pt'],
+      ['text-align', 'left'],
+    ]
+    if (tag.toLowerCase() === 'th') {
+      defaults.push(['background', '#f0f0f0'], ['font-weight', '600'])
+    }
+    return `<${tag}${addInlineStyles(rawAttributes, defaults)}>`
+  })
+}
+
+function normalizePercentageMarginsForLibreOffice(html: string, contentWidthCm: number): string {
+  return html.replace(/\sstyle=(["'])(.*?)\1/gi, (_, quote: string, styles: string) => {
+    const normalizedStyles = styles.replace(
+      /(\bmargin-left\s*:\s*)(\d+(?:\.\d+)?)%/gi,
+      (declaration, prefix: string, rawPercentage: string) => {
+        const percentage = Number.parseFloat(rawPercentage)
+        if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) return declaration
+        const marginCm = Math.round(contentWidthCm * percentage * 100) / 10_000
+        return `${prefix}${marginCm}cm`
+      },
+    )
+    return ` style=${quote}${normalizedStyles}${quote}`
+  })
+}
+
 export function buildExportHtml({
   html,
   margins,
 }: BuildExportHtmlOptions): string {
   const { widthCm, heightCm, typography } = DOCUMENT_PAGE_SPEC
+  const contentWidthCm = widthCm - margins.left - margins.right
   const embeddedImages = protectEmbeddedImages(html)
   const content = embeddedImages.restore(
     normalizeParagraphsForLibreOffice(
       inlinePageBreakStyles(
-        normalizeWhitespace(normalizeCssLengthsForLibreOffice(embeddedImages.html)),
+        normalizeWhitespace(normalizeCssLengthsForLibreOffice(
+          normalizePercentageMarginsForLibreOffice(
+            normalizeTablesForLibreOffice(embeddedImages.html),
+            contentWidthCm,
+          ),
+        )),
       ),
     ),
   )
@@ -109,7 +174,7 @@ export function buildExportHtml({
     h3 { margin: 0 0 8pt; font-size: 18pt; line-height: 27pt; }
     ul, ol { margin: 8pt 0; padding-left: 32pt; }
     li { font-size: ${typography.fontSizePt}pt; line-height: ${typography.lineHeightPt}pt; }
-    table { width: 100%; margin: 12pt 0; border-collapse: collapse; page-break-inside: avoid; }
+    table { width: 100%; margin: 12pt 0; border-collapse: collapse; table-layout: fixed; page-break-inside: avoid; }
     td, th { padding: 8pt 12pt; border: 1pt solid #000; font-size: 14pt; text-align: left; }
     th { background: #f0f0f0; font-weight: 600; }
     img { display: block; max-width: 100%; height: auto; margin: 8pt auto; }

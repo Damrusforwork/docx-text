@@ -65,6 +65,51 @@ export function renderHtmlForExport(
   return buildExportHtml({ html, margins })
 }
 
+function materializeTableLayouts(root: HTMLElement, liveRoot: HTMLElement) {
+  const liveTables = liveRoot.querySelectorAll<HTMLTableElement>('table')
+
+  root.querySelectorAll<HTMLTableElement>('table').forEach((table, tableIndex) => {
+    const liveTable = liveTables[tableIndex]
+    if (!liveTable) return
+
+    const tableBounds = liveTable.getBoundingClientRect()
+    if (tableBounds.width <= 0) return
+
+    const tableWidth = Math.round(tableBounds.width * 100) / 100
+    table.style.width = `${tableWidth}px`
+    table.style.minWidth = ''
+    table.style.tableLayout = 'fixed'
+    table.setAttribute('width', String(tableWidth))
+
+    const alignment = liveTable.dataset.tableAlign || table.dataset.tableAlign || 'left'
+    table.dataset.tableAlign = alignment
+    table.style.marginLeft = alignment === 'left' ? '0' : 'auto'
+    table.style.marginRight = alignment === 'right' ? '0' : 'auto'
+
+    const liveColumns = liveTable.querySelectorAll<HTMLTableColElement>('col')
+    table.querySelectorAll<HTMLTableColElement>('col').forEach((column, columnIndex) => {
+      const width = liveColumns[columnIndex]?.getBoundingClientRect().width || 0
+      if (width <= 0) return
+      const roundedWidth = Math.round(width * 100) / 100
+      column.style.width = `${roundedWidth}px`
+      column.style.minWidth = ''
+      column.setAttribute('width', String(roundedWidth))
+    })
+
+    Array.from(table.rows).forEach((row, rowIndex) => {
+      const liveRow = liveTable.rows[rowIndex]
+      if (!liveRow) return
+      Array.from(row.cells).forEach((cell, cellIndex) => {
+        const width = liveRow.cells[cellIndex]?.getBoundingClientRect().width || 0
+        if (width <= 0) return
+        const roundedWidth = Math.round(width * 100) / 100
+        cell.style.width = `${roundedWidth}px`
+        cell.setAttribute('width', String(roundedWidth))
+      })
+    })
+  })
+}
+
 export function renderDocumentForExport({
   editor,
   margins,
@@ -74,6 +119,7 @@ export function renderDocumentForExport({
 }: RenderDocumentOptions): DocumentRenderResult {
   const root = document.createElement('div')
   root.innerHTML = editor.getHTML()
+  materializeTableLayouts(root, editor.view.dom)
   const liveImages = editor.view.dom.querySelectorAll<HTMLImageElement>(
     '[data-resize-container][data-node="image"] img',
   )

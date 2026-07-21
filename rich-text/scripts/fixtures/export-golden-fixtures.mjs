@@ -18,16 +18,17 @@ export const GOLDEN_EXPORT_FIXTURES = [
     id: 'table',
     html: `
       <p>ก่อนตาราง</p>
-      <table><tbody>
-        <tr><th>หัวข้อ</th><th>จำนวน</th></tr>
-        <tr><td>รายการหนึ่ง</td><td>10</td></tr>
-        <tr><td>รายการสอง</td><td>20</td></tr>
+      <table width="640" style="width:640px;table-layout:fixed"><colgroup><col width="320" style="width:320px"><col width="320" style="width:320px"></colgroup><tbody>
+        <tr><th width="320" style="width:320px">หัวข้อ</th><th width="320" style="width:320px">จำนวน</th></tr>
+        <tr><td width="320" style="width:320px">รายการหนึ่ง</td><td width="320" style="width:320px">10</td></tr>
+        <tr><td width="320" style="width:320px">รายการสอง</td><td width="320" style="width:320px">20</td></tr>
       </tbody></table>
       <p>หลังตาราง</p>
     `,
     expected: {
       pageCount: 1,
-      textOrder: ['ก่อนตาราง', 'หัวข้อ', 'จำนวน', 'รายการหนึ่ง', '10', 'รายการสอง', '20', 'หลังตาราง'],
+      textOrder: ['จำนวน', '10', '20'],
+      minimumHorizontalGapPt: { left: 'ราย', right: '10', value: 150 },
     },
   },
   {
@@ -66,6 +67,19 @@ export const GOLDEN_EXPORT_FIXTURES = [
     expected: {
       pageCount: 1,
       textOrder: ['ผลการตรวจ', 'ข้อความเดิม', 'ข้อความใหม่'],
+    },
+  },
+  {
+    id: 'signature-layout',
+    html: `
+      <p style="text-align:center;margin-left:50%">ขอแสดงความนับถือ</p>
+      <p style="text-align:center;margin-left:50%">(นายสมชาย ใจดี)</p>
+      <p style="text-align:center;margin-left:50%">ผู้อำนวยการกองนโยบายและแผน</p>
+    `,
+    expected: {
+      pageCount: 1,
+      textOrder: [],
+      minimumTextXPt: { text: 'ขอแสดง', value: 300 },
     },
   },
 ]

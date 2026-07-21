@@ -8,7 +8,8 @@ const exported = buildExportHtml({
   margins: DOCUMENT_PAGE_SPEC.defaultMargins,
 })
 
-assert.match(exported, /<div class="doc-paragraph" style="text-align: center; margin-left: 50%;">/)
+assert.match(exported, /<div class="doc-paragraph" style="text-align: center; margin-left: 8\.25cm;">/)
+assert.doesNotMatch(exported, /margin-left: 50%/)
 assert.doesNotMatch(exported, /margin: 0 !important/)
 assert.equal(normalizeParagraphMargin('50%'), '50%')
 assert.equal(normalizeParagraphMargin(' 50.0% '), '50%')

@@ -12,6 +12,7 @@
     "verify:line-measurement": "node --experimental-strip-types scripts/verify-line-measurement.mjs",
     "verify:line-spacing": "node --experimental-strip-types scripts/verify-line-spacing.mjs",
     "verify:signature-layout": "node --experimental-strip-types scripts/verify-signature-layout.mjs",
+    "verify:table-export": "node --experimental-strip-types scripts/verify-table-export.mjs",
     "verify:pagination-state": "node --experimental-strip-types scripts/verify-pagination-state.mjs",
     "verify:document-schema": "node --experimental-strip-types scripts/verify-document-schema.mjs",
     "verify:import-validation": "node --experimental-strip-types scripts/verify-import-validation.mjs",
