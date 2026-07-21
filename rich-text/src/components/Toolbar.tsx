@@ -21,6 +21,7 @@ import {
   Minus,
   Highlighter,
   RemoveFormatting,
+  TableIcon,
 } from 'lucide-react'
 
 const FONT_OPTIONS = [
@@ -158,7 +159,10 @@ interface ToolbarProps {
 
 export default function Toolbar({ editor }: ToolbarProps) {
   const [, forceUpdate] = useState(0)
+  const [tablePickerOpen, setTablePickerOpen] = useState(false)
+  const [tableSize, setTableSize] = useState({ rows: 0, cols: 0 })
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const tablePickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!editor) return
@@ -182,6 +186,26 @@ export default function Toolbar({ editor }: ToolbarProps) {
       editor.off('update', handler)
     }
   }, [editor])
+
+  useEffect(() => {
+    if (!tablePickerOpen) return
+
+    const closeTablePicker = (event: MouseEvent) => {
+      if (!tablePickerRef.current?.contains(event.target as Node)) {
+        setTablePickerOpen(false)
+      }
+    }
+    const closeTablePickerOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setTablePickerOpen(false)
+    }
+
+    document.addEventListener('mousedown', closeTablePicker)
+    document.addEventListener('keydown', closeTablePickerOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeTablePicker)
+      document.removeEventListener('keydown', closeTablePickerOnEscape)
+    }
+  }, [tablePickerOpen])
 
   const setFontFamily = useCallback(
     (value: string) => {
@@ -221,6 +245,12 @@ export default function Toolbar({ editor }: ToolbarProps) {
     reader.readAsDataURL(file)
   }
 
+  const insertTable = (rows: number, cols: number) => {
+    editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
+    setTablePickerOpen(false)
+    setTableSize({ rows: 0, cols: 0 })
+  }
+
   const rawFontFamily = readCurrentFontFamily(editor)
   const currentFontFamily = matchFontFamily(rawFontFamily)
   const currentFontSize = readCurrentFontSize(editor)
@@ -229,10 +259,13 @@ export default function Toolbar({ editor }: ToolbarProps) {
   const selectedColor = editor.getAttributes('textStyle').color
   const currentTextColor = /^#[0-9a-f]{6}$/i.test(selectedColor) ? selectedColor : '#000000'
   const imageSelected = editor.isActive('image')
+  const tableSelected = editor.isActive('table')
   const setAlignment = (textAlign: 'left' | 'center' | 'right' | 'justify') => {
     const chain = editor.chain().focus()
     if (imageSelected) {
       if (textAlign !== 'justify') chain.updateAttributes('image', { textAlign }).run()
+    } else if (tableSelected) {
+      if (textAlign !== 'justify') chain.updateAttributes('table', { tableAlign: textAlign }).run()
     } else {
       if (editor.isActive('paragraph')) chain.updateAttributes('paragraph', { marginLeft: null })
       chain.setTextAlign(textAlign).run()
@@ -241,6 +274,8 @@ export default function Toolbar({ editor }: ToolbarProps) {
   const isAlignmentActive = (textAlign: 'left' | 'center' | 'right') => (
     imageSelected
       ? editor.getAttributes('image').textAlign === textAlign
+      : tableSelected
+        ? editor.getAttributes('table').tableAlign === textAlign
       : editor.isActive({ textAlign })
   )
 
@@ -443,7 +478,7 @@ export default function Toolbar({ editor }: ToolbarProps) {
         <ToolbarButton
           onClick={() => setAlignment('justify')}
           isActive={editor.isActive({ textAlign: 'justify' })}
-          disabled={imageSelected}
+          disabled={imageSelected || tableSelected}
           title="จัดเต็มแถว"
         >
           <AlignJustify size={16} />
@@ -476,6 +511,49 @@ export default function Toolbar({ editor }: ToolbarProps) {
       </div>
 
       <ToolbarDivider />
+
+      <div className="toolbar-group">
+        <div className="table-picker" ref={tablePickerRef}>
+          <button
+            type="button"
+            className={`toolbar-btn ${tablePickerOpen ? 'active' : ''}`}
+            onClick={() => setTablePickerOpen((open) => !open)}
+            title="แทรกตาราง"
+            aria-label="แทรกตาราง"
+            aria-expanded={tablePickerOpen}
+          >
+            <TableIcon size={16} />
+          </button>
+          {tablePickerOpen && (
+            <div className="table-picker-popover">
+              <div className="table-picker-grid" role="grid" aria-label="เลือกขนาดตาราง">
+                {Array.from({ length: 100 }, (_, index) => {
+                  const rows = Math.floor(index / 10) + 1
+                  const cols = (index % 10) + 1
+                  const selected = rows <= tableSize.rows && cols <= tableSize.cols
+                  return (
+                    <button
+                      key={`${rows}-${cols}`}
+                      type="button"
+                      className={`table-picker-cell ${selected ? 'selected' : ''}`}
+                      onMouseEnter={() => setTableSize({ rows, cols })}
+                      onFocus={() => setTableSize({ rows, cols })}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => insertTable(rows, cols)}
+                      aria-label={`${rows} แถว ${cols} คอลัมน์`}
+                    />
+                  )
+                })}
+              </div>
+              <div className="table-picker-label">
+                {tableSize.rows && tableSize.cols
+                  ? `${tableSize.rows} × ${tableSize.cols}`
+                  : 'เลือกขนาดตาราง'}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="toolbar-group">
         <ToolbarButton onClick={() => imageInputRef.current?.click()} title="นำเข้ารูปภาพจากเครื่อง">

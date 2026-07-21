@@ -2,7 +2,6 @@ import { Color } from '@tiptap/extension-color'
 import { FontFamily } from '@tiptap/extension-font-family'
 import { Highlight } from '@tiptap/extension-highlight'
 import { Placeholder } from '@tiptap/extension-placeholder'
-import { Table } from '@tiptap/extension-table'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableRow } from '@tiptap/extension-table-row'
@@ -17,6 +16,7 @@ import { ImageExtension } from '../extensions/imageExtension'
 import { LineHeight } from '../extensions/lineHeight'
 import { ParagraphMargin } from '../extensions/paragraphMargin'
 import { PaginationState } from '../extensions/paginationState'
+import { TableExtension } from '../extensions/tableExtension'
 import { templates } from '../templates'
 
 export function useDocumentEditor(initialDocument?: unknown) {
@@ -24,7 +24,7 @@ export function useDocumentEditor(initialDocument?: unknown) {
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Table.configure({ resizable: true }),
+      TableExtension,
       TableRow,
       TableCell,
       TableHeader,

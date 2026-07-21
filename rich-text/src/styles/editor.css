@@ -356,6 +356,55 @@
   cursor: not-allowed;
 }
 
+.table-picker {
+  position: relative;
+}
+
+.table-picker-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 110;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 14%);
+}
+
+.table-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 18px);
+  gap: 3px;
+}
+
+.table-picker-cell {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid #c9c9c9;
+  border-radius: 2px;
+  background: white;
+  cursor: pointer;
+}
+
+.table-picker-cell.selected {
+  border-color: #1a73e8;
+  background: #d0e0ff;
+}
+
+.table-picker-cell:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 1px;
+}
+
+.table-picker-label {
+  margin-top: 8px;
+  color: #555;
+  font-size: 12px;
+  text-align: center;
+}
+
 .text-color-picker {
   position: relative;
   display: flex;
@@ -572,11 +621,53 @@
 }
 
 /* Table styles */
+.document-content .tableWrapper {
+  position: relative;
+}
+
+.document-content .table-drag-handle {
+  position: absolute;
+  top: 50%;
+  left: -22px;
+  width: 18px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #c9c9c9;
+  border-radius: 4px;
+  background: #fff;
+  color: #777;
+  cursor: grab;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.document-content .tableWrapper:hover > .table-drag-handle,
+.document-content .table-drag-handle:focus-visible {
+  border-color: #1a73e8;
+  color: #1a73e8;
+  opacity: 1;
+}
+
+.document-content .table-drag-handle:active {
+  cursor: grabbing;
+}
+
 .document-content table {
   border-collapse: collapse;
   width: 100%;
   margin: 12pt 0;
   font-family: 'TH Sarabun New', sans-serif;
+}
+
+.document-content table[data-table-align='center'] {
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.document-content table[data-table-align='right'] {
+  margin-right: 0;
+  margin-left: auto;
 }
 
 .document-content th,
