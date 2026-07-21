@@ -105,4 +105,91 @@ export const templates: Record<string, Template> = {
 <p style="text-align: right;">อธิบดีกรมการปกครอง</p>
 `,
   },
+    memoNote: {
+    name: 'บันทึกข้อความ (Internal Note)',
+    description: 'บันทึกข้อความภายในสำหรับสั่งการ/เสนอความเห็น',
+    html: `
+<h1 style="text-align: center;">บันทึกข้อความ</h1>
+
+<p>&nbsp;</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td style="width: 20%;"><strong>ส่วนราชการ</strong></td>
+      <td>กองนิติการ</td>
+      <td style="width: 20%;"><strong>ที่</strong></td>
+      <td>นย 001/2567</td>
+    </tr>
+    <tr>
+      <td><strong>วันที่</strong></td>
+      <td>๑๓ กรกฎาคม ๒๕๖๗</td>
+      <td><strong>โทรศัพท์</strong></td>
+      <td>0-2XXX-XXXX</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>&nbsp;</p>
+
+<p><strong>เรื่อง</strong> ขอความเห็นเรื่องร่างระเบียบว่าด้วยการปฏิบัติงาน</p>
+<p><strong>เสนอ</strong> ผู้อำนวยการกองนิติการ</p>
+<p><strong>จาก</strong> กลุ่มวิชาการ</p>
+
+<p>&nbsp;</p>
+
+<p style="text-align: justify;">
+  ๑. <strong>ความเป็นมา</strong>
+</p>
+
+<p style="text-align: justify; padding-left: 32px;">
+  เนื่องจากปัจจุบันมีระเบียบว่าด้วยการปฏิบัติงานบางฉบับที่ยังไม่สอดคล้องกับสถานการณ์ปัจจุบัน
+  จึงมีความจำเป็นต้องปรับปรุงระเบียบให้ทันสมัยและสอดรับกับพระราชบัญญัติที่ประกาศใช้ใหม่
+</p>
+
+<p>&nbsp;</p>
+
+<p style="text-align: justify;">
+  ๒. <strong>วัตถุประสงค์</strong>
+</p>
+
+<p style="text-align: justify; padding-left: 32px;">
+  เพื่อปรับปรุงระเบียบว่าด้วยการปฏิบัติงานให้สอดคล้องกับพระราชบัญญัติการบริหารงานภาครัฐ
+  แบบดิจิทัล พ.ศ. ๒๕๖๖ และพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. ๒๕๖๒
+</p>
+
+<p>&nbsp;</p>
+
+<p style="text-align: justify;">
+  ๓. <strong>แนวทางการแก้ไข</strong>
+</p>
+
+<p style="text-align: justify; padding-left: 32px;">
+  ๓.๑ ปรับปรุงเนื้อหาให้สอดคล้องกับกฎหมายที่เกี่ยวข้อง<br />
+  ๓.๒ เพิ่มเติมขั้นตอนการดำเนินงานแบบดิจิทัล<br />
+  ๓.๓ กำหนดอำนาจหน้าที่ของเจ้าหน้าที่แต่ละระดับชัดเจน
+</p>
+
+<p>&nbsp;</p>
+
+<p style="text-align: justify;">
+  ๔. <strong>ข้อเสนอแนะ</strong>
+</p>
+
+<p style="text-align: justify; padding-left: 32px;">
+  ขอให้ผู้อำนวยการกองนิติการพิจารณาให้ความเห็นชอบในหลักการ
+  เพื่อดำเนินการจัดทำร่างระเบียบต่อไป
+</p>
+
+<p>&nbsp;</p>
+
+<p style="text-align: right;">เคารพอย่างสูง</p>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<p style="text-align: right;">(นางสาวมาลี รักษ์ธรรม)</p>
+<p style="text-align: right;">นักกฎหมายปฏิบัติการ</p>
+`,
+  },
 }
